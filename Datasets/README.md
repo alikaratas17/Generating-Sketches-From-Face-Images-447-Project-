@@ -8,6 +8,7 @@ We will keep datasets in this folder with links to each below.
 
 # CUHK Sketch Dataset
 - http://mmlab.ie.cuhk.edu.hk/archive/cufsf/
+- http://mmlab.ie.cuhk.edu.hk/archive/facesketch.html
 - 414 x 582
 # UPDG Sketch Datasets
 - https://github.com/yiranran/Unpaired-Portrait-Drawing/blob/master/portrait_drawing_resources.md

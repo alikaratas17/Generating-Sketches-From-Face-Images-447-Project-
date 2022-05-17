@@ -15,3 +15,4 @@ We will keep datasets in this folder with links to each below.
 # APDrawing Dataset
 - https://cg.cs.tsinghua.edu.cn/people/~Yongjin/APDrawingDB.zip
 - 512 x 512
+- Preprocessing needed: https://github.com/yiranran/APDrawingGAN/blob/master/preprocess/readme.md

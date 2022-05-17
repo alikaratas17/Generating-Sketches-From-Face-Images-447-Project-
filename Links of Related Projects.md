@@ -1,0 +1,3 @@
+- UPDG: https://github.com/yiranran/Unpaired-Portrait-Drawing
+- APDrawingGAN: https://github.com/yiranran/APDrawingGAN
+- Informative Drawings: https://github.com/carolineec/informative-drawings

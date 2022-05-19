@@ -6,19 +6,19 @@ import numpy as np
 norm_layer = nn.InstanceNorm2d
 
 class Generator(nn.Module):
-    def __init__(self, input_channel_number, output_channel_number, resnet_block_number=3, image_size=64):
+    def __init__(self, input_channel_number, output_channel_number, resnet_block_number=3):
         #input_channel_number and output_channel_number are 3 or 1
         #input: BxCxDxD
         super(Generator, self).__init__()
         
         self.conv_block = nn.Sequential(
-            nn.Conv2d(input_channel_number, image_size, 7, padding = 3),
-            nn.InstanceNorm2d(image_size),
+            nn.Conv2d(input_channel_number, 64, 7, padding = 3),
+            nn.InstanceNorm2d(64),
             nn.ReLU(inplace=True),
         )
         
-        in_features = image_size
-        out_features = image_size*2
+        in_features = 64
+        out_features = 128
         
         downsampling_model = []
         for _ in range(2):
@@ -78,9 +78,13 @@ class ResnetBlock(nn.Module):
         return self.resnet_block(x)+x
     
 if __name__ == "__main__":
-    gen = Generator(3,1,128)
-    tensor =  torch.rand(128,3,32,32)
-    print(gen(tensor).shape)
+    G_rgb_to_grayscale = Generator(3,1)
+    G_grayscale_to_rgb = Generator(1,3)
+    rgb_image =  torch.rand(6,3,128,128)
+    grayscale_image = G_rgb_to_grayscale(rgb_image)
+    print(grayscale_image.shape)
+    rgb_image_generated = G_grayscale_to_rgb(grayscale_image)
+    print(rgb_image_generated.shape)
 
 
 

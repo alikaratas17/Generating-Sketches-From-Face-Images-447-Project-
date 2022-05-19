@@ -6,12 +6,16 @@ from PIL import Image
 from torchvision.utils import save_image
 from models.networks import define_P
 
+#Uncomment commented two lines for sketches
+
 netP = define_P(11, 3, 64, "unet_128", "batch", use_dropout=True, gpu_ids=[])
 netP.load_state_dict(torch.load('.\checkpoints\pretrained\latest_net_P.pth'))
 
 img = Image.open('example_photo.png')
+#img = transforms.Grayscale()(img)
 convert_tensor = transforms.ToTensor()
 tensor = convert_tensor(img)
+#tensor = tensor.repeat(3,1,1)/3
 
 new_img = netP(tensor.unsqueeze(0))
 max_indices = new_img.argmax(1)

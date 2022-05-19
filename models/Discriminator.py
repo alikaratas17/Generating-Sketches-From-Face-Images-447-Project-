@@ -89,12 +89,12 @@ class Discriminator(nn.Module):
             self.relu(x)
             x = self.conv6(x)
         
-        x = torch.sigmoid(x).squeeze(3).squeeze(2)
-        return x
+        x = torch.sigmoid(x)
+        return x.mean(dim=(1,2,3))
 
 
 
 if __name__ == '__main__':
-    print(Discriminator(3,64)(torch.randn(6,3,64,64)).shape)
-    print(Discriminator(3,70)(torch.randn(6,3,70,70)).shape)
-    print(Discriminator(3,128)(torch.randn(6,3,128,128)).shape)
+    print(Discriminator(3,64)(torch.randn(6,3,512,512)).shape)
+    print(Discriminator(3,70)(torch.randn(6,3,512,512)).shape)
+    print(Discriminator(3,128)(torch.randn(6,3,512,512)).shape)

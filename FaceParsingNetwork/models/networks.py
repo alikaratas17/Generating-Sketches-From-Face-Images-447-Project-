@@ -1511,8 +1511,9 @@ class UnetGenerator(nn.Module):
         self.model = unet_block
 
     def forward(self, input):
+        out, last_layer = self.model(input)
         softmax = torch.nn.Softmax(dim = 1)
-        return softmax(self.model(input))
+        return softmax(out), softmax(last_layer)
 
 # Defines the submodule with skip connection.
 # X -------------------identity---------------------- X
@@ -1582,6 +1583,23 @@ class UnetSkipConnectionBlock(nn.Module):
         t = int((hb-ha)/2)
         model_output = model_output[:,:,t:t+ha,l:l+wa]
         if self.outermost:
-            return model_output
+            layer0 = self.model[0]
+            layer1 = self.model[1]
+            layer2 = self.model[2]
+            layer3 = self.model[3]
+            layer4 = self.model[4]
+            out = layer0(x)
+            out = layer1(out)
+            out = layer2(out)
+            out = layer3(out)
+            out = layer4(out)
+            
+            wb,hb = out.size()[3],out.size()[2]
+            wa,ha = x.size()[3],x.size()[2]
+            l = int((wb-wa)/2)
+            t = int((hb-ha)/2)
+            out = out[:,:,t:t+ha,l:l+wa]
+            
+            return model_output, out
         else:
             return torch.cat([x, model_output], 1)           #if not the outermost block, we concate x and self.model(x) during forward to implement unet

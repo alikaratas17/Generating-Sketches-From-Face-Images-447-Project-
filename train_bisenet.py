@@ -11,10 +11,6 @@ from bisenet import BiSeNet
 def readDatasets():
   pass
 
-# Returns loss: idea for now is to use cross entropy loss
-def bisenet_loss(y, y_pred):
-  pass
-
 def train(model,train_loader,optimizer):
   model.train()
   losses = []

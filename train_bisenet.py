@@ -5,6 +5,7 @@ import numpy as np
 import torch.utils.data as data
 import os
 from tqdm import tqdm
+from bisenet import BiSeNet
 
 # Returns train and test data
 def readDatasets():
@@ -19,8 +20,7 @@ def train(model,train_loader,optimizer):
   losses = []
   for x,y in tqdm(train_loader):
     x = x.cuda()
-    y_pred = model(x)
-    loss = bisenet_loss(y,y_pred)
+    loss = model.loss(x,y)
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
@@ -32,8 +32,7 @@ def eval_model(model,test_loader):
   losses = []
   for x,y in tqdm(train_loader):
     x = x.cuda()
-    y_pred = model(x)
-    loss = bisenet_loss(y,y_pred)
+    loss = model.loss(x,y)
     losses.append(loss.item())
   return np.mean(losses)
 
@@ -44,7 +43,7 @@ def main():
   train_data,test_data = readDatasets()
   train_loader = data.DataLoader(torch.Tensor(train_data),batch_size=B,shuffle=True,pin_memory=True)
   test_loader = data.DataLoader(torch.Tensor(test_data),batch_size=B,shuffle=False,pin_memory=True)
-  model = Bisenet() # TO BE DEFINED FROM OUTSIDE
+  model = BiSeNet()
 
   # Loading model if was trained before
   if "bisenet.pt" in os.listdir("."):

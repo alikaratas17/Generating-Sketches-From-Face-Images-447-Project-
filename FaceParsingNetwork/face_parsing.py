@@ -6,9 +6,12 @@ from PIL import Image
 from torchvision.utils import save_image
 from models.networks import define_P
 
-netP = define_P(11, 3, 64, "unet_128", "batch", use_dropout=True, gpu_ids=[])
-netP.load_state_dict(torch.load('.\checkpoints\pretrained\latest_net_P.pth'))
+def getParsingNetwork():
+    netP = define_P(11, 3, 64, "unet_128", "batch", use_dropout=True, gpu_ids=[])
+    netP.load_state_dict(torch.load('.\checkpoints\pretrained\latest_net_P.pth'))
+    return netP
 
+netP = getParsingNetwork()
 img = Image.open('example_photo.png')
 img = transforms.Grayscale()(img)
 convert_tensor = transforms.ToTensor()
@@ -16,7 +19,6 @@ tensor = convert_tensor(img)
 tensor = tensor.repeat(3,1,1)/3
 
 new_img, new_img2 = netP(tensor.unsqueeze(0))
-print(torch.max(torch.abs(new_img-new_img2)))
 max_indices = new_img.argmax(1)
 new_img = torch.zeros (new_img.shape).scatter (1, max_indices.unsqueeze (1), 1.0).squeeze(0)
 img_eyes = new_img[2].unsqueeze(0)+new_img[3].unsqueeze(0)+new_img[4].unsqueeze(0)+new_img[5].unsqueeze(0)

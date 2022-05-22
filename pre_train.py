@@ -8,10 +8,22 @@ from tqdm import tqdm
 from models.Generator import Generator
 from models.Discriminator import Discriminator
 import clip
-def calc_loss():
-  pass
 
-def train(genA,genB,discA,discB,iterA,iterB,optimizer):
+
+def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x):
+  y = main_gen(x)
+  x_hat = other_gen(y)
+  loss1 = (x - x_hat).mean() # L1 distance cycle consistency
+  loss2 = torch.square(CLIP.encode_image(x) - CLIP.encode_image(y)).mean() # L2 distance of CLIP embeddings
+  loss3 = torch.square(faceParsingNet(x,get_embeddings=True)-faceParsingNet(y,get_embeddings=True)).mean() #L2 distance of Face Parsing Net Features/Embeddings
+  parsing_x = faceParsingNet(x) #Use these to get masked inputs for local discriminators
+  parsing_y = faceParsingNet(y) #Use these to get masked inputs for local discriminators
+  # For other_discriminators x is real data
+  # For main_discriminators y is fake data
+  # For main_gen main_discriminators will give adversarial loss
+  return lossMainGen,lossMainDisc,lossOtherDisc
+
+def train(genA,genB,discA,discB,iterA,iterB,optimizers):
   genA.train()
   genB.train()
   discA.train()

@@ -7,7 +7,7 @@ import os
 from tqdm import tqdm
 from models.Generator import Generator
 from models.Discriminator import Discriminator
-
+import clip
 def calc_loss():
   pass
 
@@ -91,8 +91,9 @@ def main():
   discriminator_count = 4
   discriminatorsA,discriminatorsB = getDiscriminators(discriminator_count)
   faceParsingNet = getFaceParsingNet()
-  #TODO ADD CLIP
-  
+  CLIP,_ = clip.load("ViT-B/32",device="cuda",jit=False)
+  clip.model.convert_weights(CLIP) # use CLIP.encode_image() for clip loss
+
   # Init Optimizers
   optimizerGenA = optim.Adam(genA.parameters(),lr = lr)
   optimizerGenB = optim.Adam(genB.parameters(),lr = lr)

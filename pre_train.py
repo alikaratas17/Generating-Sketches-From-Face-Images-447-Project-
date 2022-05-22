@@ -63,7 +63,10 @@ def eval_model(genA,genB,discA,discB,testA_loader,testB_loader):
       lossesB.append(tuple([a.item() for a in loss]))
     return lossesA,lossesB
 def readDatasets():
-  pass
+  sketch_data = np.load("../sketches.pickle", allow_pickle =True)
+  sketch_train, sketch_test = torch.utils.data.random_split(sketch_data, [4000, 5000])
+  print(sketch_train.shape)
+  print(sketch_test.shape)
 
 def getGenerators():
   a = Generator(1,3)

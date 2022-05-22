@@ -10,6 +10,7 @@ from models.Discriminator import Discriminator
 from FaceParsingNetwork.face_parsing import getParsingNetwork
 from util import getMasksFromParsing
 import clip
+import cv2
 
 
 def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x):
@@ -62,11 +63,25 @@ def eval_model(genA,genB,discA,discB,testA_loader,testB_loader):
       loss = calc_loss() # TODO
       lossesB.append(tuple([a.item() for a in loss]))
     return lossesA,lossesB
+
 def readDatasets():
   sketch_data = np.load("../sketches.pickle", allow_pickle =True)
-  sketch_train, sketch_test = torch.utils.data.random_split(sketch_data, [4000, 5000])
-  print(sketch_train.shape)
-  print(sketch_test.shape)
+  sketch_train, sketch_test = torch.utils.data.random_split(sketch_data, [4000, 1000])
+  image_files = os.listdir('/datasets/ffhq/images1024x1024/')
+  i=0
+  images = []
+  for image in tqdm(image_files):
+    i+=1
+    img = cv2.imread('/datasets/ffhq/images1024x1024/' + image)
+    img = cv2.resize(img,(256,256))
+    images.append(torch.from_numpy(np.moveaxis(img,2,0)).unsqueeze(0))
+    photo_data = torch.cat(images,dim=0).numpy()
+    if i==10000:
+      break
+    
+  photo_train, photo__test = torch.utils.data.random_split(sketch_data, [8000, 2000])
+  print(torch.Tensor(photo_train).shape)
+  return photo_train, photo_test, sketch_train, sketch_test
 
 def getGenerators():
   a = Generator(1,3)

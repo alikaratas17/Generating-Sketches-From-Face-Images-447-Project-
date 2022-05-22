@@ -1,6 +1,6 @@
 import torch
 
-def getMasksFromParsing(parsing, isRGB = true):
+def getMasksFromParsing(parsing, isRGB = True):
   max_indices = parsing.argmax(1)
   parsing = torch.zeros (parsing.shape).scatter (1, max_indices.unsqueeze(1), 1.0)
 
@@ -19,5 +19,5 @@ def getMasksFromParsing(parsing, isRGB = true):
 
   masks = torch.cat((mask_eyes.unsqueeze(0), mask_nose.unsqueeze(0), mask_lips.unsqueeze(0)), dim=0)
 
-return masks
+  return masks
 

@@ -59,22 +59,22 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizers):
     losses.append(loss.item())
   return losses
 
-def eval_model(genA,genB,discA,discB,testA_loader,testB_loader):
+def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,faceParsingNet):
   genA.eval()
   genB.eval()
   discA.eval()
   discB.eval()
   lossesA = []
   with torch.no_grad:
-    for x in tqdm(testA_loader):
-      x = x.cuda()
-      loss = calc_loss() # TODO
-      lossesA.append(tuple([a.item() for a in loss]))
-    for x in tqdm(testB_loader):
-      x = x.cuda()
-      loss = calc_loss() # TODO
-      lossesB.append(tuple([a.item() for a in loss]))
-    return lossesA,lossesB
+    for a in tqdm(testA_loader):
+      a = a.cuda()
+      loss = calc_loss(genB, genA, discB, discA, CLIP_model, faceParsingNet, a)
+      lossesA.append(tuple([i.item() for i in loss]))
+    for b in tqdm(testB_loader):
+      b = b.cuda()
+      loss = calc_loss(genA, genB, discA, discB, CLIP_model, faceParsingNet, b)
+      lossesB.append(tuple([i.item() for i in loss]))
+    return lossesA, lossesB
 
 
 # Normalize to [0,1]
@@ -158,12 +158,12 @@ def main():
   # Training Loop
   eval_losses = []
   train_losses = []
-  l = eval_model() # TODO
+  l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet)
   eval_losses.append(l)
   for i in range(epochs):
     l = train() # TODO
     train_losses.append(l)
-    l = eval_model() # TODO
+    l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet)
     eval_losses.append(l)
 
   

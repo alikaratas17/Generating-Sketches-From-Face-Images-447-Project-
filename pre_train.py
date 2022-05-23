@@ -188,7 +188,7 @@ def main():
   for i in range(epochs):
     trainAIterator = iter(trainA_loader)
     trainBIterator = iter(trainB_loader)
-    l = train() # TODO
+    l = train(genA,genB,discriminatorsA,discriminatorsB,trainAIterator,trainBIterator,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet)
     train_losses.append(l)
     l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet)
     eval_losses.append(l)

@@ -15,6 +15,8 @@ import pickle as pkl
 import torch.optim as optim
 
 def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x):
+  print(x.shape)
+  print(main_gen)
   y = main_gen(x)
   x_hat = other_gen(y)
   parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
@@ -42,7 +44,7 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   loss_other_d = 1 - other_discriminators[0](x)
   for i in range(1,len(other_discriminators)):
     if x.shape != parsing_x[i-1].shape:
-      print("{} != {} in calc_loss x * parsing_x[i-1]".format(x.shape,parsing_x[i-1].shape)
+      print("{} != {} in calc_loss x * parsing_x[i-1]".format(x.shape,parsing_x[i-1].shape))
       return -1
     loss_other_d += (1 - other_discriminators[i](x * parsing_x[i-1]))
   
@@ -50,7 +52,7 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   loss_main_d = main_discriminators[0](y)
   for i in range(1,len(main_discriminators)):
     if y.shape != parsing_y[i-1].shape:
-      print("{} != {} in calc_loss y * parsing_y[i-1]".format(y.shape,parsing_y[i-1].shape)
+      print("{} != {} in calc_loss y * parsing_y[i-1]".format(y.shape,parsing_y[i-1].shape))
       return -1
     loss_main_d += main_discriminators[i](y * parsing_y[i-1])
   # For main_gen main_discriminators will give adversarial loss -> use - main_disc loss
@@ -154,12 +156,12 @@ def readDatasets():
   """ 
   photo_data = torch.load("../photos.pt").numpy()  
   photo_train, photo_test = torch.utils.data.random_split(photo_data, [8000, 2000])
-  print("Dataset shapes: {} | {} | {} | {}".format(photo_train.shape,photo_test.shape,sketch_train.shape,sketch_test.shape))
+  #print("Dataset shapes: {} | {} | {} | {}".format(photo_train.shape,photo_test.shape,sketch_train.shape,sketch_test.shape))
   return photo_train, photo_test, sketch_train, sketch_test
 
 def getGenerators():
-  a = Generator(1,3)
-  b = Generator(3,1)
+  a = Generator(1,3) #sketch->photo
+  b = Generator(3,1) #photo->sketch
   if "genA.pt" in os.listdir("."):
     a.load_state_dict(torch.load("./genA.pt"))
   if "genB.pt" in os.listdir("."):
@@ -167,8 +169,8 @@ def getGenerators():
   return a.cuda(), b.cuda()
 
 def getDiscriminators(num_disc):
-  a = [Discriminator(3).cuda() for i in range(num_disc)]
-  b = [Discriminator(1).cuda() for i in range(num_disc)]
+  a = [Discriminator(3).cuda() for i in range(num_disc)] #discriminate photo
+  b = [Discriminator(1).cuda() for i in range(num_disc)] #discriminate sketch
 
   for i in range(num_disc):
     if "discA{}.pt".format(i) in os.listdir("."):
@@ -178,10 +180,11 @@ def getDiscriminators(num_disc):
   return a,b
 
 def getFaceParsingOutput(x,face_parsing_net):
+  x_shape = x.shape[1]
   if x.shape[1]==1:
     x = x.repeat(1,3,1,1)/3
   parsing, features = face_parsing_net(x)
-  return getMasksFromParsing(parsing, x.shape[1]==3), features
+  return getMasksFromParsing(parsing, x_shape==3), features
 
 def main():
   B = 8
@@ -208,6 +211,8 @@ def main():
   CLIP,_ = clip.load("ViT-B/32",device="cuda", jit=False)
   clip.model.convert_weights(CLIP) # use CLIP.encode_image() for clip loss
 
+  #print("genA : {}".format(genA))
+  #print("genB : {}".format(genB))
   # Init Optimizers
   optimizerGenA = optim.Adam(genA.parameters(),lr = lr)
   optimizerGenB = optim.Adam(genB.parameters(),lr = lr)
@@ -224,16 +229,17 @@ def main():
   eval_losses = []
   train_losses = []
   l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet)
+  print(l)
   eval_losses.append(l)
-  return
   for i in range(epochs):
     trainAIterator = iter(trainA_loader)
     trainBIterator = iter(trainB_loader)
     l = train(genA,genB,discriminatorsA,discriminatorsB,trainAIterator,trainBIterator,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet)
+    print(l)
     train_losses.append(l)
-    return
     l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet)
     eval_losses.append(l)
+    print(l)
 
   
   torch.save(genA.state_dict(),"./genA.pt")

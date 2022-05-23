@@ -12,6 +12,7 @@ from util import getMasksFromParsing
 import clip
 import cv2
 import pickle as pkl
+import torch.optim as optim
 
 def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x):
   y = main_gen(x)
@@ -72,7 +73,7 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossG,lossD_1,lossD_2 = calc_loss(genA,genB,discA,discB,CLIP_model,faceParsingNet,ab)
+    lossG,lossD_1,lossD_2 = calc_loss(genA,genB,discA,discB,CLIP_model,faceParsingNet,b)
     optimizerGenB.zero_grad()
     lossG.backward()
     optimizerGenA.step()
@@ -90,7 +91,8 @@ def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,facePa
   (i.eval() for i in discA)
   (i.eval() for i in discB)
   lossesA = []
-  with torch.no_grad:
+  lossesB = []
+  with torch.no_grad():
     for a in tqdm(testA_loader):
       a = a.cuda()
       loss = calc_loss(genB, genA, discB, discA, CLIP_model, faceParsingNet, a)
@@ -128,13 +130,13 @@ def getGenerators():
     a.load_state_dict(torch.load("./genA.pt"))
   if "genB.pt" in os.listdir("."):
     b.load_state_dict(torch.load("./genB.pt"))
-  return a,b
+  return a.cuda(),b.cuda()
 
 def getDiscriminators(num_disc):
-  a = [Discriminator(3) for i in range(num_disc)]
-  b = [Discriminator(1) for i in range(num_disc)]
+  a = [Discriminator(3).cuda() for i in range(num_disc)]
+  b = [Discriminator(1).cuda() for i in range(num_disc)]
 
-  for i in range(discriminator_count):
+  for i in range(num_disc):
     if "discA{}.pt".format(i) in os.listdir("."):
       a.load_state_dict(torch.load("./discA{}.pt".format(i)))
     if "discB{}.pt".format(i) in os.listdir("."):
@@ -165,7 +167,8 @@ def main():
   discriminator_count = 4
   discriminatorsA,discriminatorsB = getDiscriminators(discriminator_count)
   faceParsingNet = getParsingNetwork()
-  CLIP,_ = clip.load("ViT-B/32",device="cuda",jit=False)
+  device = "cuda" if torch.cuda.is_available() else "cpu"  
+  CLIP,_ = clip.load("ViT-B/32",device=device,jit=False)
   clip.model.convert_weights(CLIP) # use CLIP.encode_image() for clip loss
 
   # Init Optimizers

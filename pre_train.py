@@ -15,8 +15,8 @@ import pickle as pkl
 import torch.optim as optim
 
 def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x):
-  print(x.shape)
-  print(main_gen)
+  #print(x.shape)
+  #print(main_gen)
   y = main_gen(x)
   x_hat = other_gen(y)
   parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
@@ -26,16 +26,20 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
     return -1
   loss1 = (x - x_hat).mean() # L1 distance cycle consistency
   if x.shape[1] == 1:
-    clip_x_embed = CLIP_model.encode_image(x.repeat(1,3,1,1))
-    clip_y_embed = CLIP_mode.encode_image(y)
+    pass
+    #clip_x_embed = CLIP_model.encode_image(x.repeat(1,3,1,1))
+    #clip_y_embed = CLIP_mode.encode_image(y)
   else:
-    clip_x_embed = CLIP_model.encode_image(x)
-    clip_y_embed = CLIP_mode.encode_image(y.repeat(1,3,1,1))	
- 
+    pass
+    #clip_x_embed = CLIP_model.encode_image(x)
+    #clip_y_embed = CLIP_mode.encode_image(y.repeat(1,3,1,1))	
+  """
   if clip_x_embed.shape != clip_y_embed.shape:
     print("{} != {} in calc_loss clip_embeds shapes".format(clip_x_embed.shape,clip_y_embed.shape))
     return -1
   loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
+  """
+  loss2 = 0  
   if features_x.shape != features_y.shape:
     print("{} != {} in calc_loss face parsing net features shapes".format(features_x.shape,features_y.shape))
     return -1
@@ -48,6 +52,7 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
       return -1
     loss_other_d += (1 - other_discriminators[i](x * parsing_x[i-1]))
   
+  loss_other_d = loss_other_d.mean() 
   # For main_discriminators y is fake data
   loss_main_d = main_discriminators[0](y)
   for i in range(1,len(main_discriminators)):
@@ -56,6 +61,8 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
       return -1
     loss_main_d += main_discriminators[i](y * parsing_y[i-1])
   # For main_gen main_discriminators will give adversarial loss -> use - main_disc loss
+  
+  loss_main_d = loss_main_d.mean()
   loss_main_g = 1 - loss_main_d
   
   lossMainGen = loss1 + loss2 + loss3 + loss_main_g
@@ -221,14 +228,7 @@ def main():
   print(l)
   eval_losses.append(l)
   for i in range(epochs):
-<<<<<<< HEAD
-    trainAIterator = iter(trainA_loader)
-    trainBIterator = iter(trainB_loader)
-    l = train(genA,genB,discriminatorsA,discriminatorsB,trainAIterator,trainBIterator,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet)
-    print(l)
-=======
     l = train(genA,genB,discriminatorsA,discriminatorsB,trainA_loader,trainB_loader,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet)
->>>>>>> 765c0bba964b8c4978a2ea698e1ce68598b90550
     train_losses.append(l)
     l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet)
     eval_losses.append(l)

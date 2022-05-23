@@ -19,17 +19,35 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   x_hat = other_gen(y)
   parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
   parsing_y, features_y = getFaceParsingOutput(y,faceParsingNet)
+  if x.shape != x_hat.shape:
+    print("{} != {} in calc_loss x,x_hat shapes".format(x.shape,x_hat.shape))
   loss1 = (x - x_hat).mean() # L1 distance cycle consistency
-  loss2 = torch.square(CLIP_model.encode_image(x) - CLIP_model.encode_image(y)).mean() # L2 distance of CLIP embeddings
+  if x.shape[1] == 1:
+    clip_x_embed = CLIP_model.encode_image(x.repeat(1,3,1,1))
+    clip_y_embed = CLIP_mode.encode_image(y)
+  else:
+    clip_x_embed = CLIP_model.encode_image(x)
+    clip_y_embed = CLIP_mode.encode_image(y.repeat(1,3,1,1))	
+ 
+  if clip_x_embed.shape != clip_y_embed.shape:
+    print("{} != {} in calc_loss clip_embeds shapes".format(clip_x_embed.shape,clip_y_embed.shape))
+  
+  loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
+  if features_x.shape != features_y.shape:
+    print("{} != {} in calc_loss face parsing net features shapes".format(features_x.shape,features_y.shape))
   loss3 = torch.square(features_x - features_y).mean() #L2 distance of Face Parsing Net Features/Embeddings
   # For other_discriminators x is real data
   loss_other_d = 1 - other_discriminators[0](x)
   for i in range(1,len(other_discriminators)):
+    if x.shape != parsing_x[i-1].shape:
+      print("{} != {} in calc_loss x * parsing_x[i-1]".format(x.shape,parsing_x[i-1].shape))
     loss_other_d += (1 - other_discriminators[i](x * parsing_x[i-1]))
   
   # For main_discriminators y is fake data
   loss_main_d = main_discriminators[0](y)
   for i in range(1,len(main_discriminators)):
+    if y.shape != parsing_y[i-1].shape:
+      print("{} != {} in calc_loss y * parsing_y[i-1]".format(y.shape,parsing_y[i-1].shape))
     loss_main_d += main_discriminators[i](y * parsing_y[i-1])
   # For main_gen main_discriminators will give adversarial loss -> use - main_disc loss
   loss_main_g = 1 - loss_main_d
@@ -42,15 +60,19 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
 def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP_model,faceParsingNet):
   genA.train()
   genB.train()
-  (i.train() for i in discA)
-  (i.train() for i in discB)
+  [i.train() for i in discA]
+  [i.train() for i in discB]
   lossesA = []
   lossesB = []
+  i = 0
   while a_cont or b_cont:
+    i +=1
     a = next(iterA).cuda()
+    
     if a is None:
       a_cont = False
     if a_cont:
+      a = a.cuda()
       optimizerGenA.zero_grad()
       optimizerGenB.zero_grad()
       optimizerDiscA.zero_grad()
@@ -65,10 +87,13 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
       lossD_2.backward()
       optimizerDiscA.step()
       lossesA.append(tuple(lossG,lossD_1,lossD_2))
+    if i % 2 == 0:
+      continue
     b = next(iterB).cuda()
     if b is None:
       b_cont = False
       continue
+    b = b.cuda()
     optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
@@ -88,10 +113,11 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
 def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,faceParsingNet):
   genA.eval()
   genB.eval()
-  (i.eval() for i in discA)
-  (i.eval() for i in discB)
+  [i.eval() for i in discA]
+  [i.eval() for i in discB]
   lossesA = []
-  lossesB = []
+  lossesB = [] 
+
   with torch.no_grad():
     for a in tqdm(testA_loader):
       a = a.cuda()
@@ -164,11 +190,14 @@ def main():
   
   # Init Models
   genA,genB = getGenerators()
+  genA = genA.cuda()
+  genB = genB.cuda()
   discriminator_count = 4
   discriminatorsA,discriminatorsB = getDiscriminators(discriminator_count)
-  faceParsingNet = getParsingNetwork()
-  device = "cuda" if torch.cuda.is_available() else "cpu"  
-  CLIP,_ = clip.load("ViT-B/32",device=device, jit=False)
+
+  faceParsingNet = getParsingNetwork().cuda()
+  #device = "cuda" if torch.cuda.is_available() else "cpu"  
+  CLIP,_ = clip.load("ViT-B/32",device="cuda", jit=False)
   clip.model.convert_weights(CLIP) # use CLIP.encode_image() for clip loss
 
   # Init Optimizers
@@ -188,11 +217,13 @@ def main():
   train_losses = []
   l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet)
   eval_losses.append(l)
+  return
   for i in range(epochs):
     trainAIterator = iter(trainA_loader)
     trainBIterator = iter(trainB_loader)
     l = train(genA,genB,discriminatorsA,discriminatorsB,trainAIterator,trainBIterator,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet)
     train_losses.append(l)
+    return
     l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet)
     eval_losses.append(l)
 

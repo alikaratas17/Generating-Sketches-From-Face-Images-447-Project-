@@ -16,14 +16,26 @@ import cv2
 def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x):
   y = main_gen(x)
   x_hat = other_gen(y)
-  parsing_x, features_x = faceParsingNet(x)
-  parsing_y, features_y = faceParsingNet(y)
+  parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
+  parsing_y, features_y = getFaceParsingOutput(y,faceParsingNet)
   loss1 = (x - x_hat).mean() # L1 distance cycle consistency
   loss2 = torch.square(CLIP.encode_image(x) - CLIP.encode_image(y)).mean() # L2 distance of CLIP embeddings
-  loss3 = torch.square(features_x-features_y).mean() #L2 distance of Face Parsing Net Features/Embeddings
+  loss3 = torch.square(features_x - features_y).mean() #L2 distance of Face Parsing Net Features/Embeddings
   # For other_discriminators x is real data
+  loss_other_d = 1 - other_discriminators[0](x)
+  for i in range(1,len(other_discriminators)):
+    loss_other_d += (1 - other_discriminators[i](x * parsing_x[i-1]))
+  
   # For main_discriminators y is fake data
-  # For main_gen main_discriminators will give adversarial loss
+  loss_main_d = main_discriminators[0](y)
+  for i in range(1,len(main_discriminators)):
+    loss_main_d += main_discriminators[i](y * parsing_y[i-1])
+  # For main_gen main_discriminators will give adversarial loss -> use - main_disc loss
+  loss_main_g = 1 - loss_main_d
+  
+  lossMainGen = loss1 + loss2 + loss3 + loss_main_g
+  lossMainDisc = loss_main_d
+  lossOtherDisc = loss_other_d
   return lossMainGen,lossMainDisc,lossOtherDisc
 
 def train(genA,genB,discA,discB,iterA,iterB,optimizers):
@@ -105,9 +117,11 @@ def getDiscriminators(num_disc):
       b.load_state_dict(torch.load("./discB{}.pt".format(i)))
   return a,b
 
-def getFaceParsingNet(x, isRGB = True):
-  parsing, features = faceParsingNet(x)
-  return getMasksFromParsing(parsing, isRGB), features
+def getFaceParsingOutput(x,face_parsing_net):
+  if x.shape[1]==1:
+    x = x.repeat(1,3,1,1)/3
+  parsing, features = face_parsing_net(x)
+  return getMasksFromParsing(parsing, x.shape[1]==3), features
 
 def main():
   B = 8

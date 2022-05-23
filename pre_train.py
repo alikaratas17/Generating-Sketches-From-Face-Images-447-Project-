@@ -46,7 +46,9 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
   (i.train() for i in discB)
   lossesA = []
   lossesB = []
+  i = 0
   while a_cont or b_cont:
+    i +=1
     a = next(iterA)
     if a is None:
       a_cont = False
@@ -65,6 +67,8 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
       lossD_2.backward()
       optimizerDiscA.step()
       lossesA.append(tuple(lossG,lossD_1,lossD_2))
+    if i % 2 == 0:
+      continue
     b = next(iterB)
     if b is None:
       b_cont = False

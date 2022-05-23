@@ -68,15 +68,16 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   lossOtherDisc = loss_other_d
   return lossMainGen,lossMainDisc,lossOtherDisc
 
-def train(genA,genB,discA,discB,trainloaderA,trainloaderB,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP_model,faceParsingNet,preprocess):
+def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP_model,faceParsingNet,preprocess):
   genA.train()
   genB.train()
   [i.train() for i in discA]
   [i.train() for i in discB]
   lossesA = []
   lossesB = []
-  i = 0
-  for a in trainloaderA:
+  c = min(len(iterA),len(iterB))
+  for _ in range(c):
+    a = iterA.next()
     a = a.cuda()
     optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
@@ -95,13 +96,17 @@ def train(genA,genB,discA,discB,trainloaderA,trainloaderB,optimizerGenA,optimize
     lossD_2.backward()
     optimizerDiscA.step()
     lossesA.append(tuple(lossG,lossD_1,lossD_2))
-  for b in trainloaderB:
+
+    b = iterB.next()
     b = b.cuda()
     optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossG,lossD_1,lossD_2 = calc_loss(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,preprocess)
+    losses = calc_loss(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,preprocess)
+    if losses == -1:
+      return
+    lossG,lossD_1,lossD_2 = losses
     optimizerGenB.zero_grad()
     lossG.backward()
     optimizerGenA.step()
@@ -228,7 +233,7 @@ def main():
   print(l)
   eval_losses.append(l)
   for i in range(epochs):
-    l = train(genA,genB,discriminatorsA,discriminatorsB,trainA_loader,trainB_loader,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,preprocess)
+    l = train(genA,genB,discriminatorsA,discriminatorsB,iter(trainA_loader),iter(trainB_loader),optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,preprocess)
     print(l)
     train_losses.append(l)
     l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)

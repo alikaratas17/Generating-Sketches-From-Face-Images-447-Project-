@@ -21,6 +21,7 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   parsing_y, features_y = getFaceParsingOutput(y,faceParsingNet)
   if x.shape != x_hat.shape:
     print("{} != {} in calc_loss x,x_hat shapes".format(x.shape,x_hat.shape))
+    return -1
   loss1 = (x - x_hat).mean() # L1 distance cycle consistency
   if x.shape[1] == 1:
     clip_x_embed = CLIP_model.encode_image(x.repeat(1,3,1,1))
@@ -30,15 +31,18 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
     clip_y_embed = CLIP_mode.encode_image(y.repeat(1,3,1,1)	
   if clip_x_embed.shape != clip_y_embed.shape:
     print("{} != {} in calc_loss clip_embeds shapes".format(clip_x_embed.shape,clip_y_embed.shape))
+    return -1
   loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
   if features_x.shape != features_y.shape:
     print("{} != {} in calc_loss face parsing net features shapes".format(features_x.shape,features_y.shape))
+    return -1
   loss3 = torch.square(features_x - features_y).mean() #L2 distance of Face Parsing Net Features/Embeddings
   # For other_discriminators x is real data
   loss_other_d = 1 - other_discriminators[0](x)
   for i in range(1,len(other_discriminators)):
     if x.shape != parsing_x[i-1].shape:
       print("{} != {} in calc_loss x * parsing_x[i-1]".format(x.shape,parsing_x[i-1].shape)
+      return -1
     loss_other_d += (1 - other_discriminators[i](x * parsing_x[i-1]))
   
   # For main_discriminators y is fake data
@@ -46,6 +50,7 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   for i in range(1,len(main_discriminators)):
     if y.shape != parsing_y[i-1].shape:
       print("{} != {} in calc_loss y * parsing_y[i-1]".format(y.shape,parsing_y[i-1].shape)
+      return -1
     loss_main_d += main_discriminators[i](y * parsing_y[i-1])
   # For main_gen main_discriminators will give adversarial loss -> use - main_disc loss
   loss_main_g = 1 - loss_main_d
@@ -74,7 +79,10 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
       optimizerGenB.zero_grad()
       optimizerDiscA.zero_grad()
       optimizerDiscB.zero_grad()
-      lossG,lossD_1,lossD_2 = calc_loss(genB,genA,discB,discA,CLIP_model,faceParsingNet,a)
+      losses =  calc_loss(genB,genA,discB,discA,CLIP_model,faceParsingNet,a)
+      if losses == -1:
+        return
+      lossG,lossD_1,lossD_2 =losses
       optimizerGenA.zero_grad()
       lossG.backward()
       optimizerGenB.step()
@@ -143,6 +151,7 @@ def readDatasets():
   """ 
   photo_data = torch.load("../photos.pt").numpy()  
   photo_train, photo_test = torch.utils.data.random_split(photo_data, [8000, 2000])
+  print("Dataset shapes: {} | {} | {} | {}".format(photo_train.shape,photo_test.shape,sketch_train.shape,sketch_test.shape))
   return photo_train, photo_test, sketch_train, sketch_test
 
 def getGenerators():

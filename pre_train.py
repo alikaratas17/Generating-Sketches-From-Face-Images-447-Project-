@@ -24,23 +24,19 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
     print("{} != {} in calc_loss x,x_hat shapes".format(x.shape,x_hat.shape))
     return -1
   loss1 = (x - x_hat).mean() # L1 distance cycle consistency
-  loss2 = torch.tensor([0]).cuda()
-  for i in range(x.shape[0]):
-    image_x = x[i,:,:,:]
-    image_y = y[i,:,:,:]
-    if image_x.shape[0]==1:
-      image_x = image_x.repeat(3,1,1)
-    else:
-      image_y = image_y.repeat(3,1,1)
-    image_x = transforms.ToPILImage()(image_x)
-    image_y = transforms.ToPILImage()(image_y)
-    clip_x_embed = CLIP_model.encode_image(image_x)
-    clip_y_embed = CLIP_mode.encode_image(image_y)
-    if clip_x_embed.shape != clip_y_embed.shape:
-      print("{} != {} in calc_loss clip_embeds shapes".format(clip_x_embed.shape,clip_y_embed.shape))
-      return -1
-    loss2 += torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
-  loss2 = loss2 / x.shape[0]
+  image_x = x[:,:,16:-16,16:-16].cuda()
+  image_y = y[:,:,16:-16,16:-16].cuda()
+  if image_x.shape[0]==1:
+    image_x = image_x.repeat(3,1,1)
+  else:
+    image_y = image_y.repeat(3,1,1)
+  clip_x_embed = CLIP_model.encode_image(image_x)
+  clip_y_embed = CLIP_mode.encode_image(image_y)
+  if clip_x_embed.shape != clip_y_embed.shape:
+    print("{} != {} in calc_loss clip_embeds shapes".format(clip_x_embed.shape,clip_y_embed.shape))
+    return -1
+  loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
+    
   if features_x.shape != features_y.shape:
     print("{} != {} in calc_loss face parsing net features shapes".format(features_x.shape,features_y.shape))
     return -1

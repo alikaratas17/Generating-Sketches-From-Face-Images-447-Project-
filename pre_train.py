@@ -13,6 +13,7 @@ import clip
 import cv2
 import pickle as pkl
 import torch.optim as optim
+from torchvision.transforms import transforms
 
 def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess):
   y = main_gen(x)
@@ -23,19 +24,18 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
     print("{} != {} in calc_loss x,x_hat shapes".format(x.shape,x_hat.shape))
     return -1
   loss1 = (x - x_hat).mean() # L1 distance cycle consistency
+  print(type(preprocess(x)))
   if x.shape[1] == 1:
-
-    clip_x_embed = CLIP_model.encode_image(preprocess(x.repeat(1,3,1,1)))
-    clip_y_embed = CLIP_mode.encode_image(preprocess(y))
+    clip_x_embed = CLIP_model.encode_image(transforms.ToPILImage(preprocess(x.repeat(1,3,1,1))))
+    clip_y_embed = CLIP_mode.encode_image(transforms.ToPILImage(preprocess(y)))
   else:
-    clip_x_embed = CLIP_model.encode_image(preprocess(x))
-    clip_y_embed = CLIP_mode.encode_image(preprocess(y.repeat(1,3,1,1)))
+    clip_x_embed = CLIP_model.encode_image(transforms.ToPILImage(preprocess(x)))
+    clip_y_embed = CLIP_mode.encode_image(transforms.ToPILImage(preprocess(y.repeat(1,3,1,1))))
  
   if clip_x_embed.shape != clip_y_embed.shape:
     print("{} != {} in calc_loss clip_embeds shapes".format(clip_x_embed.shape,clip_y_embed.shape))
     return -1
   loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
-
   if features_x.shape != features_y.shape:
     print("{} != {} in calc_loss face parsing net features shapes".format(features_x.shape,features_y.shape))
     return -1
@@ -47,9 +47,9 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
       print("{} != {} in calc_loss x * parsing_x[i-1]".format(x.shape,parsing_x[i-1].shape))
       return -1
     loss_other_d += (1 - other_discriminators[i](x * parsing_x[i-1]))
-  loss_other_d = loss_other_d.mean()
   
-  loss_other_d = loss_other_d.mean() 
+  loss_other_d = loss_other_d.mean()
+ 
   # For main_discriminators y is fake data
   loss_main_d = main_discriminators[0](y)
   for i in range(1,len(main_discriminators)):
@@ -188,7 +188,7 @@ def getFaceParsingOutput(x,face_parsing_net):
   return getMasksFromParsing(parsing, x_shape==3), features
 
 def main():
-  B = 8
+  B=8
   epochs = 10
   lr = 1e-3
 

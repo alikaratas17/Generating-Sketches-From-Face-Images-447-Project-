@@ -60,6 +60,8 @@ def eval_model(genA,genB,discA,discB,testA_loader,testB_loader):
       loss = calc_loss() # TODO
       lossesB.append(tuple([a.item() for a in loss]))
     return lossesA,lossesB
+
+# Normalize to [0,1]
 def readDatasets():
   pass
 

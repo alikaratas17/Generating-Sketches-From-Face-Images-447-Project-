@@ -20,7 +20,7 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
   parsing_y, features_y = getFaceParsingOutput(y,faceParsingNet)
   loss1 = (x - x_hat).mean() # L1 distance cycle consistency
-  loss2 = torch.square(CLIP.encode_image(x) - CLIP.encode_image(y)).mean() # L2 distance of CLIP embeddings
+  loss2 = torch.square(CLIP_model.encode_image(x) - CLIP_model.encode_image(y)).mean() # L2 distance of CLIP embeddings
   loss3 = torch.square(features_x - features_y).mean() #L2 distance of Face Parsing Net Features/Embeddings
   # For other_discriminators x is real data
   loss_other_d = 1 - other_discriminators[0](x)
@@ -47,7 +47,7 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
   lossesA = []
   lossesB = []
   while a_cont or b_cont:
-    a = next(iterA).cuda()
+    a = next(iterA)
     if a is None:
       a_cont = False
     if a_cont:
@@ -65,7 +65,7 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
       lossD_2.backward()
       optimizerDiscA.step()
       lossesA.append(tuple(lossG,lossD_1,lossD_2))
-    b = next(iterB).cuda()
+    b = next(iterB)
     if b is None:
       b_cont = False
       continue
@@ -94,11 +94,11 @@ def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,facePa
   lossesB = []
   with torch.no_grad():
     for a in tqdm(testA_loader):
-      a = a.cuda()
+      a = a
       loss = calc_loss(genB, genA, discB, discA, CLIP_model, faceParsingNet, a)
       lossesA.append(tuple([i.item() for i in loss]))
     for b in tqdm(testB_loader):
-      b = b.cuda()
+      b = b
       loss = calc_loss(genA, genB, discA, discB, CLIP_model, faceParsingNet, b)
       lossesB.append(tuple([i.item() for i in loss]))
     return lossesA, lossesB
@@ -130,11 +130,11 @@ def getGenerators():
     a.load_state_dict(torch.load("./genA.pt"))
   if "genB.pt" in os.listdir("."):
     b.load_state_dict(torch.load("./genB.pt"))
-  return a.cuda(),b.cuda()
+  return a, b
 
 def getDiscriminators(num_disc):
-  a = [Discriminator(3).cuda() for i in range(num_disc)]
-  b = [Discriminator(1).cuda() for i in range(num_disc)]
+  a = [Discriminator(3) for i in range(num_disc)]
+  b = [Discriminator(1) for i in range(num_disc)]
 
   for i in range(num_disc):
     if "discA{}.pt".format(i) in os.listdir("."):
@@ -168,7 +168,7 @@ def main():
   discriminatorsA,discriminatorsB = getDiscriminators(discriminator_count)
   faceParsingNet = getParsingNetwork()
   device = "cuda" if torch.cuda.is_available() else "cpu"  
-  CLIP,_ = clip.load("ViT-B/32",device=device,jit=False)
+  CLIP,_ = clip.load("ViT-B/32",device="cpu", jit=False)
   clip.model.convert_weights(CLIP) # use CLIP.encode_image() for clip loss
 
   # Init Optimizers

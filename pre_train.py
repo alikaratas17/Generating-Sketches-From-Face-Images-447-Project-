@@ -32,10 +32,11 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
       image_x = image_x.repeat(3,1,1)
     else:
       image_y = image_y.repeat(3,1,1)
-    image_x = transforms.ToPILImage()(image_x)
-    image_y = transforms.ToPILImage()(image_y)
+    image_x = preprocess(transforms.ToPILImage()(image_x)).cuda()
+    image_y = preprocess(transforms.ToPILImage()(image_y)).cuda()
+    print(image_x.shape)
     clip_x_embed = CLIP_model.encode_image(image_x)
-    clip_y_embed = CLIP_mode.encode_image(image_y)
+    clip_y_embed = CLIP_model.encode_image(image_y)
     if clip_x_embed.shape != clip_y_embed.shape:
       print("{} != {} in calc_loss clip_embeds shapes".format(clip_x_embed.shape,clip_y_embed.shape))
       return -1
@@ -208,6 +209,7 @@ def main():
   
   # Init Models
   genA,genB = getGenerators()
+  print(genA)
   genA = genA.cuda()
   genB = genB.cuda()
   discriminator_count = 4

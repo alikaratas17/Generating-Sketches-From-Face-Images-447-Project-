@@ -24,31 +24,36 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
     print("{} != {} in calc_loss x,x_hat shapes".format(x.shape,x_hat.shape))
     return -1
   loss1 = (x - x_hat).mean() # L1 distance cycle consistency
-  print(type(preprocess(x)))
-  if x.shape[1] == 1:
-    clip_x_embed = CLIP_model.encode_image(transforms.ToPILImage(preprocess(x.repeat(1,3,1,1))))
-    clip_y_embed = CLIP_mode.encode_image(transforms.ToPILImage(preprocess(y)))
-  else:
-    clip_x_embed = CLIP_model.encode_image(transforms.ToPILImage(preprocess(x)))
-    clip_y_embed = CLIP_mode.encode_image(transforms.ToPILImage(preprocess(y.repeat(1,3,1,1))))
- 
-  if clip_x_embed.shape != clip_y_embed.shape:
-    print("{} != {} in calc_loss clip_embeds shapes".format(clip_x_embed.shape,clip_y_embed.shape))
-    return -1
-  loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
+  loss2 = torch.tensor([0]).cuda()
+  for i in range(x.shape[0]):
+    image_x = x[i,:,:,:]
+    image_y = y[i,:,:,:]
+    if image_x.shape[0]==1:
+      image_x = image_x.repeat(3,1,1)
+    else:
+      image_y = image_y.repeat(3,1,1)
+    image_x = transforms.ToPILImage()(image_x)
+    image_y = transforms.ToPILImage()(image_y)
+    clip_x_embed = CLIP_model.encode_image(image_x)
+    clip_y_embed = CLIP_mode.encode_image(image_y)
+    if clip_x_embed.shape != clip_y_embed.shape:
+      print("{} != {} in calc_loss clip_embeds shapes".format(clip_x_embed.shape,clip_y_embed.shape))
+      return -1
+    loss2 += torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
+  loss2 = loss2 / x.shape[0]
   if features_x.shape != features_y.shape:
     print("{} != {} in calc_loss face parsing net features shapes".format(features_x.shape,features_y.shape))
     return -1
   loss3 = torch.square(features_x - features_y).mean() #L2 distance of Face Parsing Net Features/Embeddings
   # For other_discriminators x is real data
-  loss_other_d = 1 - other_discriminators[0](x)
+  pred_other_d = other_discriminators[0](x) 
   for i in range(1,len(other_discriminators)):
     if x.shape != parsing_x[i-1].shape:
       print("{} != {} in calc_loss x * parsing_x[i-1]".format(x.shape,parsing_x[i-1].shape))
       return -1
-    loss_other_d += (1 - other_discriminators[i](x * parsing_x[i-1]))
-  
-  loss_other_d = loss_other_d.mean()
+    pred_other_d += other_discriminators[i](x * parsing_x[i-1])
+  pred_other_d = pred_other_d / len(other_discriminators)
+  loss_other_d = (1 - pred_other_d).mean()
  
   # For main_discriminators y is fake data
   loss_main_d = main_discriminators[0](y)
@@ -57,12 +62,13 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
       print("{} != {} in calc_loss y * parsing_y[i-1]".format(y.shape,parsing_y[i-1].shape))
       return -1
     loss_main_d += main_discriminators[i](y * parsing_y[i-1])
-  loss_main_d = loss_main_d.mean()
+  loss_main_d = loss_main_d.mean() / len(main_discriminators)
   # For main_gen main_discriminators will give adversarial loss -> use - main_disc loss
   
   loss_main_d = loss_main_d.mean()
   loss_main_g = 1 - loss_main_d
-  
+  loss1 = loss1 * 1e-2 #weight cycle consistency by 1e-2
+  loss2 = loss2 * 1e-1 #weight CLIP loss by 1e-1
   lossMainGen = loss1 + loss2 + loss3 + loss_main_g
   lossMainDisc = loss_main_d
   lossOtherDisc = loss_other_d

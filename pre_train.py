@@ -38,32 +38,57 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   lossOtherDisc = loss_other_d
   return lossMainGen,lossMainDisc,lossOtherDisc
 
-def train(genA,genB,discA,discB,iterA,iterB,optimizers):
+def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP_model,faceParsingNet):
   genA.train()
   genB.train()
-  discA.train()
-  discB.train()
-  losses = []
-  while 1:
-    a = next(iterA)
-
-
-
-
-  for x in tqdm(train_loader):
-    x = x.cuda()
-    loss = model.loss(x,y)
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-    losses.append(loss.item())
-  return losses
+  (i.train() for i in discA)
+  (i.train() for i in discB)
+  lossesA = []
+  lossesB = []
+  while a_cont or b_cont:
+    a = next(iterA).cuda()
+    if a is None:
+      a_cont = False
+    if a_cont:
+      optimizerGenA.zero_grad()
+      optimizerGenB.zero_grad()
+      optimizerDiscA.zero_grad()
+      optimizerDiscB.zero_grad()
+      lossG,lossD_1,lossD_2 = calc_loss(genB,genA,discB,discA,CLIP_model,faceParsingNet,a)
+      optimizerGenA.zero_grad()
+      lossG.backward()
+      optimizerGenB.step()
+      optimizerDiscB.zero_grad()
+      lossD_1.backward()
+      optimizerDiscB.step()
+      lossD_2.backward()
+      optimizerDiscA.step()
+      lossesA.append(tuple(lossG,lossD_1,lossD_2))
+    b = next(iterB).cuda()
+    if b is None:
+      b_cont = False
+      continue
+    optimizerGenA.zero_grad()
+    optimizerGenB.zero_grad()
+    optimizerDiscA.zero_grad()
+    optimizerDiscB.zero_grad()
+    lossG,lossD_1,lossD_2 = calc_loss(genA,genB,discA,discB,CLIP_model,faceParsingNet,ab)
+    optimizerGenB.zero_grad()
+    lossG.backward()
+    optimizerGenA.step()
+    optimizerDiscA.zero_grad()
+    lossD_1.backward()
+    optimizerDiscA.step()
+    lossD_2.backward()
+    optimizerDiscB.step()
+    lossesB.append(tuple(lossG,lossD_1,lossD_2))
+  return lossesA,lossesB
 
 def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,faceParsingNet):
   genA.eval()
   genB.eval()
-  discA.eval()
-  discB.eval()
+  (i.eval() for i in discA)
+  (i.eval() for i in discB)
   lossesA = []
   with torch.no_grad:
     for a in tqdm(testA_loader):
@@ -129,11 +154,12 @@ def main():
 
   #Load Datasets
   train_dataA, test_dataA, train_dataB, test_dataB = readDatasets()
-  trainAIterator = iter(data.DataLoader(torch.Tensor(train_dataA),batch_size=B,shuffle=True))
-  trainBIterator = iter(data.DataLoader(torch.Tensor(train_dataB),batch_size=B,shuffle=True))
+  trainA_loader = data.DataLoader(torch.Tensor(train_dataA),batch_size=B,shuffle=True) 
+  trainB_loader = data.DataLoader(torch.Tensor(train_dataB),batch_size=B,shuffle=True)
   testA_loader = data.DataLoader(torch.Tensor(test_dataA),batch_size=B,shuffle=False)
   testB_loader = data.DataLoader(torch.Tensor(test_dataB),batch_size=B,shuffle=False)
-  print(trainAIterator)
+  
+  
   # Init Models
   genA,genB = getGenerators()
   discriminator_count = 4
@@ -160,6 +186,8 @@ def main():
   l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet)
   eval_losses.append(l)
   for i in range(epochs):
+    trainAIterator = iter(trainA_loader)
+    trainBIterator = iter(trainB_loader)
     l = train() # TODO
     train_losses.append(l)
     l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet)

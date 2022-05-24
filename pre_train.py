@@ -26,17 +26,17 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   loss1 = (x - x_hat).mean() # L1 distance cycle consistency
   image_x = x[:,:,16:-16,16:-16].cuda()
   image_y = y[:,:,16:-16,16:-16].cuda()
-  if image_x.shape[0]==1:
-    image_x = image_x.repeat(3,1,1)
+  if image_x.shape[1]==1:
+    image_x = image_x.repeat(1,3,1,1)
   else:
-    image_y = image_y.repeat(3,1,1)
+    image_y = image_y.repeat(1,3,1,1)
   clip_x_embed = CLIP_model.encode_image(image_x)
-  clip_y_embed = CLIP_mode.encode_image(image_y)
+  clip_y_embed = CLIP_model.encode_image(image_y)
   if clip_x_embed.shape != clip_y_embed.shape:
     print("{} != {} in calc_loss clip_embeds shapes".format(clip_x_embed.shape,clip_y_embed.shape))
     return -1
   loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
-    
+
   if features_x.shape != features_y.shape:
     print("{} != {} in calc_loss face parsing net features shapes".format(features_x.shape,features_y.shape))
     return -1
@@ -62,7 +62,13 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   # For main_gen main_discriminators will give adversarial loss -> use - main_disc loss
   
   loss_main_d = loss_main_d.mean()
-  loss_main_g = 1 - loss_main_d
+  loss_main_g = main_discriminators[0](y)
+  for i in range(1,len(main_discriminators)):
+    if y.shape != parsing_y[i-1].shape:
+      print("{} != {} in calc_loss y * parsing_y[i-1]".format(y.shape,parsing_y[i-1].shape))
+      return -1
+    loss_main_g += main_discriminators[i](y * parsing_y[i-1])
+  loss_main_g = - loss_main_g.mean() / len(main_discriminators)
   loss1 = loss1 * 1e-2 #weight cycle consistency by 1e-2
   loss2 = loss2 * 1e-1 #weight CLIP loss by 1e-1
   lossMainGen = loss1 + loss2 + loss3 + loss_main_g
@@ -78,7 +84,7 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
   lossesA = []
   lossesB = []
   c = min(len(iterA),len(iterB))
-  for _ in range(c):
+  for _ in tqdm(range(c)):
     a = iterA.next()
     a = a.cuda()
     optimizerGenA.zero_grad()
@@ -88,10 +94,12 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     losses = calc_loss(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,preprocess)
     if losses == -1:
       return
-    lossG,lossD_1,lossD_2 =losses
+    lossG,lossD_1,lossD_2 = losses
     lossG.backward()
     optimizerGenA.zero_grad()
+
     optimizerGenB.step()
+    optimizerGenB.zero_grad()
     optimizerDiscB.zero_grad()
     lossD_1.backward()
     optimizerDiscB.step()
@@ -111,8 +119,10 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     lossG,lossD_1,lossD_2 = losses
     lossG.backward()
     optimizerGenB.zero_grad()
+    
     optimizerGenA.step()
     optimizerDiscA.zero_grad()
+    optimizerGenA.zero_grad()
     lossD_1.backward()
     optimizerDiscA.step()
     lossD_2.backward()
@@ -204,6 +214,7 @@ def main():
   
   # Init Models
   genA,genB = getGenerators()
+  print(genA)
   genA = genA.cuda()
   genB = genB.cuda()
   discriminator_count = 4
@@ -232,16 +243,23 @@ def main():
   eval_losses = []
   train_losses = []
   l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
-  print("Eval Losses".format(l))
   eval_losses.append(l)
+  print("Eval Loss: {}".format([np.mean(x) for x in l]))
   for i in range(epochs):
-    print("Epoch {}".format(i))
+    print("{}th epoch is starting".format(i))
     l = train(genA,genB,discriminatorsA,discriminatorsB,iter(trainA_loader),iter(trainB_loader),optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,preprocess)
-    print("Train Losses".format(l))
     train_losses.append(l)
+    print("Train Loss: {}".format([np.mean(x) for x in l]))
     l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
     eval_losses.append(l)
-    print("Eval Losses".format(l))
+    print("Eval Loss: {}".format([np.mean(x) for x in l]))
+    if i%4==0:
+      torch.save(genA.state_dict(),"./genA.pt")
+      torch.save(genB.state_dict(),"./genB.pt")
+      for j in range(discriminator_count):
+        torch.save(discriminatorsA[j].state_dict(),"./discA{}.pt".format(j))
+        torch.save(discriminatorsB[j].state_dict(),"./discB{}.pt".format(j))
+
 
   
   torch.save(genA.state_dict(),"./genA.pt")

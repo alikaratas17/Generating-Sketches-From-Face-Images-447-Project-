@@ -89,8 +89,8 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     if losses == -1:
       return
     lossG,lossD_1,lossD_2 =losses
-    optimizerGenA.zero_grad()
     lossG.backward()
+    optimizerGenA.zero_grad()
     optimizerGenB.step()
     optimizerDiscB.zero_grad()
     lossD_1.backward()
@@ -109,8 +109,8 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     if losses == -1:
       return
     lossG,lossD_1,lossD_2 = losses
-    optimizerGenB.zero_grad()
     lossG.backward()
+    optimizerGenB.zero_grad()
     optimizerGenA.step()
     optimizerDiscA.zero_grad()
     lossD_1.backward()
@@ -232,15 +232,16 @@ def main():
   eval_losses = []
   train_losses = []
   l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
-  print(l)
+  print("Eval Losses".format(l))
   eval_losses.append(l)
   for i in range(epochs):
+    print("Epoch {}".format(i))
     l = train(genA,genB,discriminatorsA,discriminatorsB,iter(trainA_loader),iter(trainB_loader),optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,preprocess)
-    print(l)
+    print("Train Losses".format(l))
     train_losses.append(l)
     l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
     eval_losses.append(l)
-    print(l)
+    print("Eval Losses".format(l))
 
   
   torch.save(genA.state_dict(),"./genA.pt")

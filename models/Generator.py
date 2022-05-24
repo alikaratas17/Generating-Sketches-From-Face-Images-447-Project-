@@ -3,8 +3,6 @@ import torch.nn.functional as F
 import torch
 import numpy as np
 
-norm_layer = nn.InstanceNorm2d
-
 class Generator(nn.Module):
     def __init__(self, input_channel_number, output_channel_number, resnet_block_number=3):
         #input_channel_number and output_channel_number are 3 or 1
@@ -76,16 +74,3 @@ class ResnetBlock(nn.Module):
         
     def forward(self, x):
         return self.resnet_block(x)+x
-    
-if __name__ == "__main__":
-    G_rgb_to_grayscale = Generator(3,1)
-    G_grayscale_to_rgb = Generator(1,3)
-    rgb_image =  torch.rand(6,3,128,128)
-    grayscale_image = G_rgb_to_grayscale(rgb_image)
-    print(grayscale_image.shape)
-    rgb_image_generated = G_grayscale_to_rgb(grayscale_image)
-    print(rgb_image_generated.shape)
-
-
-
-

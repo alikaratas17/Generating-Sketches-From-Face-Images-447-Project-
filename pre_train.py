@@ -16,7 +16,7 @@ import torch.optim as optim
 from torchvision.transforms import transforms
 
 def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess):
-  y = main_gen(x)
+  y = main_gen(x.detach())
   x_hat = other_gen(y)
   parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
   parsing_y, features_y = getFaceParsingOutput(y,faceParsingNet)
@@ -52,7 +52,7 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   loss_other_d = (1 - pred_other_d).mean()
  
   # For main_discriminators y is fake data
-  y2 = main_gen(x)
+  y2 = main_gen(x.detach())
   loss_main_d = main_discriminators[0](y2)
   for i in range(1,len(main_discriminators)):
     if y2.shape != parsing_y[i-1].shape:
@@ -62,7 +62,6 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   loss_main_d = loss_main_d.mean() / len(main_discriminators)
   # For main_gen main_discriminators will give adversarial loss -> use - main_disc loss
   
-  loss_main_d = loss_main_d.mean()
   loss_main_g = main_discriminators[0](y)
   for i in range(1,len(main_discriminators)):
     if y.shape != parsing_y[i-1].shape:
@@ -180,7 +179,7 @@ def getGenerators():
     a.load_state_dict(torch.load("./genA.pt"))
   if "genB.pt" in os.listdir("."):
     b.load_state_dict(torch.load("./genB.pt"))
-  return a.cuda(), b.cuda()
+  return a, b
 
 def getDiscriminators(num_disc):
   a = [Discriminator(3).cuda() for i in range(num_disc)] #discriminate photo
@@ -201,6 +200,7 @@ def getFaceParsingOutput(x,face_parsing_net):
   return getMasksFromParsing(parsing, x_shape==3), features
 
 def main():
+  torch.autograd.set_detect_anomaly(True)
   B=8
   epochs = 10
   lr = 1e-3
@@ -215,7 +215,6 @@ def main():
   
   # Init Models
   genA,genB = getGenerators()
-  print(genA)
   genA = genA.cuda()
   genB = genB.cuda()
   discriminator_count = 4
@@ -243,9 +242,8 @@ def main():
   # Training Loop
   eval_losses = []
   train_losses = []
-  l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
-  eval_losses.append(l)
-  print("Eval Loss: {}".format([np.mean(x) for x in l]))
+  #l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
+  #eval_losses.append(l)
   for i in range(epochs):
     print("{}th epoch is starting".format(i))
     l = train(genA,genB,discriminatorsA,discriminatorsB,iter(trainA_loader),iter(trainB_loader),optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,preprocess)

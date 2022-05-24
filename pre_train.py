@@ -54,6 +54,7 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   # For main_discriminators y is fake data
   y2 = main_gen(x.detach())
   loss_main_d = main_discriminators[0](y2)
+  loss_main_d_additions = []
   for i in range(1,len(main_discriminators)):
     if y2.shape != parsing_y[i-1].shape:
       print("{} != {} in calc_loss y * parsing_y[i-1]".format(y2.shape,parsing_y[i-1].shape))

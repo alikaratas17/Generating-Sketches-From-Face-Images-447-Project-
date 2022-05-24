@@ -54,12 +54,11 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   # For main_discriminators y is fake data
   y2 = main_gen(x)
   loss_main_d = main_discriminators[0](y2)
-  parsing_y2, features_y2 = getFaceParsingOutput(y2,faceParsingNet)
   for i in range(1,len(main_discriminators)):
-    if y2.shape != parsing_y2[i-1].shape:
-      print("{} != {} in calc_loss y * parsing_y[i-1]".format(y2.shape,parsing_y2[i-1].shape))
+    if y2.shape != parsing_y[i-1].shape:
+      print("{} != {} in calc_loss y * parsing_y[i-1]".format(y2.shape,parsing_y[i-1].shape))
       return -1
-    loss_main_d += main_discriminators[i](y2 * parsing_y2[i-1])
+    loss_main_d += main_discriminators[i](y2 * parsing_y[i-1])
   loss_main_d = loss_main_d.mean() / len(main_discriminators)
   # For main_gen main_discriminators will give adversarial loss -> use - main_disc loss
   

@@ -12,7 +12,7 @@ class Generator(nn.Module):
         self.conv_block = nn.Sequential(
             nn.Conv2d(input_channel_number, 64, 7, padding = 3),
             nn.InstanceNorm2d(64),
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=False),
         )
         
         in_features = 64
@@ -22,7 +22,7 @@ class Generator(nn.Module):
         for _ in range(2):
             downsampling_model += [nn.Conv2d(in_features, out_features, 3, stride=2, padding=1),
                         nn.InstanceNorm2d(out_features),
-                        nn.ReLU(inplace=True)]
+                        nn.ReLU(inplace=False)]
             in_features = out_features
             out_features = in_features*2
 
@@ -40,7 +40,7 @@ class Generator(nn.Module):
             upsampling_model += [
                 nn.ConvTranspose2d(in_features, out_features, 3, stride=2, padding=1, output_padding=1),
                 nn.InstanceNorm2d(out_features),
-                nn.ReLU(inplace=True),
+                nn.ReLU(inplace=False),
             ]
             in_features = out_features
             out_features = in_features//2
@@ -67,7 +67,7 @@ class ResnetBlock(nn.Module):
         self.resnet_block = nn.Sequential(
             nn.Conv2d(conv_dim, conv_dim, kernel_size = (3,3), stride = (1,1), padding = 1),
             nn.InstanceNorm2d(conv_dim),
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=False),
             nn.Conv2d(conv_dim, conv_dim, kernel_size = (3,3), stride = (1,1), padding = 1),
             nn.InstanceNorm2d(conv_dim),
         )

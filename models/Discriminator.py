@@ -10,7 +10,7 @@ class Discriminator(nn.Module):
     def __init__(self,in_channels,image_size=70):
         super(Discriminator, self).__init__()
         self.dim = image_size
-        self.relu = nn.LeakyReLU(negative_slope= 0.2, inplace=True)
+        self.relu = nn.LeakyReLU(negative_slope= 0.2, inplace=False)
         if image_size==70:
             self.conv1 = nn.Conv2d(in_channels,64,4,stride=2)
             self.conv2 = nn.Conv2d(64,128,4,stride=2)

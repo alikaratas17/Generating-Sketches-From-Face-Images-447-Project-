@@ -153,9 +153,9 @@ def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,facePa
 
 # Normalize to [0,1]
 def readDatasets():
-  sketch_data = np.load("../sketches.pickle", allow_pickle =True)/255.0
+  sketch_data = np.load("./sketches.pickle", allow_pickle =True)/255.0
   sketch_train, sketch_test = torch.utils.data.random_split(sketch_data, [4000, 1000]) 
-  image_files = os.listdir('/datasets/ffhq/images1024x1024/')
+  #image_files = os.listdir('/datasets/ffhq/images1024x1024/')
   """
   photo_data = torch.zeros(10000, 3, 256, 256)
   for i in tqdm(range(10000)):
@@ -166,9 +166,9 @@ def readDatasets():
       break
   torch.save(photo_data, "../photos.pt")
   """ 
-  photo_data = torch.load("../photos.pt").numpy()/255.0
-  print(photo_data.max())
-  print(sketch_data.max())
+  photo_data = torch.load("./photos.pt").numpy()/255.0
+  #print(photo_data.max())
+  #print(sketch_data.max())
   photo_train, photo_test = torch.utils.data.random_split(photo_data, [8000, 2000])
   #print("Dataset shapes: {} | {} | {} | {}".format(photo_train.shape,photo_test.shape,sketch_train.shape,sketch_test.shape))
   return photo_train, photo_test, sketch_train, sketch_test

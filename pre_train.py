@@ -263,6 +263,11 @@ def main():
 
   #Load Datasets
   train_dataA, test_dataA, train_dataB, test_dataB = readDatasets()
+  #train_dataA = train_dataA[:100]
+  #train_dataB = train_dataB[:100]
+  #test_dataA = test_dataA[:100]
+  #test_dataB= test_dataB[:100]
+  
   trainA_loader = data.DataLoader(torch.Tensor(train_dataA),batch_size=B,shuffle=True) 
   trainB_loader = data.DataLoader(torch.Tensor(train_dataB),batch_size=B,shuffle=True)
   testA_loader = data.DataLoader(torch.Tensor(test_dataA),batch_size=B,shuffle=False)
@@ -300,11 +305,12 @@ def main():
   train_losses = []
   l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
   eval_losses.append(l)
+  print("Eval Loss: {}".format([np.mean(x) for x in l]))
   for i in range(epochs):
     print("{}th epoch is starting".format(i))
     l = train(genA,genB,discriminatorsA,discriminatorsB,iter(trainA_loader),iter(trainB_loader),optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,preprocess)
     train_losses.append(l)
-    print("Train Loss: {}".format([np.array(x).mean(dim=0) for x in l]))
+    print("Train Loss: {}".format([np.array(x).mean(axis=0) for x in l]))
     l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
     eval_losses.append(l)
     print("Eval Loss: {}".format([np.mean(x) for x in l]))

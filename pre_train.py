@@ -14,7 +14,52 @@ import cv2
 import pickle as pkl
 import torch.optim as optim
 from torchvision.transforms import transforms
+def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess,loss_num):
+  if loss_num == 1:
+    y = main_gen(x)
+    x_hat = other_gen(y)
+    parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
+    parsing_y, features_y = getFaceParsingOutput(y,faceParsingNet)
+    loss1 = (x - x_hat).mean() # L1 distance cycle consistency
+    image_x = x[:,:,16:-16,16:-16].cuda()
+    image_y = y[:,:,16:-16,16:-16].cuda()
+    if image_x.shape[1]==1:
+      image_x = image_x.repeat(1,3,1,1)
+    else:
+      image_y = image_y.repeat(1,3,1,1)
+    clip_x_embed = CLIP_model.encode_image(image_x)
+    clip_y_embed = CLIP_model.encode_image(image_y)
+    loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
 
+    loss3 = torch.square(features_x - features_y).mean() #L2 distance of Face Parsing Net Features/Embeddings
+    loss_main_g = main_discriminators[0](y)
+    for i in range(1,len(main_discriminators)):
+      loss_main_g += main_discriminators[i](y * parsing_y[i-1])
+    loss_main_g = - loss_main_g.mean() / len(main_discriminators)
+    loss1 = loss1 * 1e-2 #weight cycle consistency by 1e-2
+    loss2 = loss2 * 1e-1 #weight CLIP loss by 1e-1
+    lossMainGen = loss1 + loss2 + loss3 + loss_main_g
+    return lossMainGen
+  if loss_num ==2:    
+    parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
+    # For other_discriminators x is real data
+    pred_other_d = other_discriminators[0](x) 
+    for i in range(1,len(other_discriminators)):
+      pred_other_d += other_discriminators[i](x * parsing_x[i-1])
+    pred_other_d = pred_other_d / len(other_discriminators)
+    loss_other_d = (1 - pred_other_d).mean()
+    return loss_other_d
+  if loss_num ==3: 
+    y = main_gen(x)
+    parsing_y, features_y = getFaceParsingOutput(y,faceParsingNet)
+    # For main_discriminators y is fake data
+    y = main_gen(x)
+    loss_main_d = main_discriminators[0](y)
+    loss_main_d_additions = []
+    for i in range(1,len(main_discriminators)):
+      loss_main_d += main_discriminators[i](y * parsing_y[i-1])
+    loss_main_d = loss_main_d.mean() / len(main_discriminators)
+    return loss_main_d
 def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess):
   y = main_gen(x.detach())
   x_hat = other_gen(y)
@@ -92,21 +137,24 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    losses = calc_loss(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,preprocess)
-    if losses == -1:
-      return
-    lossG,lossD_1,lossD_2 = losses
+    lossG = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,preprocess,1)
     lossG.backward()
-    optimizerGenA.zero_grad()
-
     optimizerGenB.step()
+    optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
+    optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
+    lossD_1 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,preprocess,3)
     lossD_1.backward()
     optimizerDiscB.step()
+    optimizerGenA.zero_grad()
+    optimizerGenB.zero_grad()
+    optimizerDiscA.zero_grad()
+    optimizerDiscB.zero_grad()
+    lossD_2 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,preprocess,2)
     lossD_2.backward()
     optimizerDiscA.step()
-    lossesA.append(tuple(lossG,lossD_1,lossD_2))
+    lossesA.append((lossG.item(),lossD_1.item(),lossD_2.item()))
 
     b = iterB.next()
     b = b.cuda()
@@ -114,21 +162,24 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    losses = calc_loss(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,preprocess)
-    if losses == -1:
-      return
-    lossG,lossD_1,lossD_2 = losses
+    lossG = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,preprocess,1)
     lossG.backward()
-    optimizerGenB.zero_grad()
-    
     optimizerGenA.step()
-    optimizerDiscA.zero_grad()
     optimizerGenA.zero_grad()
+    optimizerGenB.zero_grad()
+    optimizerDiscA.zero_grad()
+    optimizerDiscB.zero_grad()
+    lossD_1 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,preprocess,3)
     lossD_1.backward()
     optimizerDiscA.step()
+    optimizerGenA.zero_grad()
+    optimizerGenB.zero_grad()
+    optimizerDiscA.zero_grad()
+    optimizerDiscB.zero_grad()
+    lossD_2 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,preprocess,2)
     lossD_2.backward()
     optimizerDiscB.step()
-    lossesB.append(tuple(lossG,lossD_1,lossD_2))
+    lossesB.append((lossG.item(),lossD_1.item(),lossD_2.item()))
   return lossesA,lossesB
 
 def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,faceParsingNet,preprocess):
@@ -154,7 +205,9 @@ def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,facePa
 # Normalize to [0,1]
 def readDatasets():
   sketch_data = np.load("./sketches.pickle", allow_pickle =True)/255.0
-  sketch_train, sketch_test = torch.utils.data.random_split(sketch_data, [4000, 1000]) 
+  sketch_train = sketch_data[:4000]
+  sketch_test = sketch_data[4000:]
+  #sketch_train, sketch_test = torch.utils.data.random_split(sketch_data, [4000, 1000]) 
   #image_files = os.listdir('/datasets/ffhq/images1024x1024/')
   """
   photo_data = torch.zeros(10000, 3, 256, 256)
@@ -169,7 +222,9 @@ def readDatasets():
   photo_data = torch.load("./photos.pt").numpy()/255.0
   #print(photo_data.max())
   #print(sketch_data.max())
-  photo_train, photo_test = torch.utils.data.random_split(photo_data, [8000, 2000])
+  photo_train = photo_data[:8000]
+  photo_test = photo_data[8000:]
+  #photo_train, photo_test = torch.utils.data.random_split(photo_data, [8000, 2000])
   #print("Dataset shapes: {} | {} | {} | {}".format(photo_train.shape,photo_test.shape,sketch_train.shape,sketch_test.shape))
   return photo_train, photo_test, sketch_train, sketch_test
 
@@ -243,17 +298,17 @@ def main():
   # Training Loop
   eval_losses = []
   train_losses = []
-  #l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
-  #eval_losses.append(l)
+  l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
+  eval_losses.append(l)
   for i in range(epochs):
     print("{}th epoch is starting".format(i))
     l = train(genA,genB,discriminatorsA,discriminatorsB,iter(trainA_loader),iter(trainB_loader),optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,preprocess)
     train_losses.append(l)
-    print("Train Loss: {}".format([np.mean(x) for x in l]))
+    print("Train Loss: {}".format([np.array(x).mean(dim=0) for x in l]))
     l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
     eval_losses.append(l)
     print("Eval Loss: {}".format([np.mean(x) for x in l]))
-    if i%4==0:
+    if i%4==3:
       torch.save(genA.state_dict(),"./genA.pt")
       torch.save(genB.state_dict(),"./genB.pt")
       for j in range(discriminator_count):

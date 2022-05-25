@@ -1,3 +1,4 @@
 .DS_Store
 sketches.pickle
 photos.pt
+./FaceParsingNetwork/checkpoints/pretrained/latest_net_P.pth

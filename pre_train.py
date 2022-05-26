@@ -233,6 +233,7 @@ def getGenerators():
   b = Generator(3,1) #photo->sketch
   if "genA.pt" in os.listdir("."):
     a.load_state_dict(torch.load("./genA.pt"))
+    print("loaded")
   if "genB.pt" in os.listdir("."):
     b.load_state_dict(torch.load("./genB.pt"))
   return a, b
@@ -243,9 +244,9 @@ def getDiscriminators(num_disc):
 
   for i in range(num_disc):
     if "discA{}.pt".format(i) in os.listdir("."):
-      a.load_state_dict(torch.load("./discA{}.pt".format(i)))
+      a[i].load_state_dict(torch.load("./discA{}.pt".format(i)))
     if "discB{}.pt".format(i) in os.listdir("."):
-      b.load_state_dict(torch.load("./discB{}.pt".format(i)))
+      b[i].load_state_dict(torch.load("./discB{}.pt".format(i)))
   return a,b
 
 def getFaceParsingOutput(x,face_parsing_net):

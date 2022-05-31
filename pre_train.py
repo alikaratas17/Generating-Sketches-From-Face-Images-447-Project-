@@ -36,8 +36,10 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     for i in range(1,len(main_discriminators)):
       loss_main_g += main_discriminators[i](y * parsing_y[i-1])
     loss_main_g = - loss_main_g.mean() / len(main_discriminators)
-    loss1 = loss1 * 1e-2 #weight cycle consistency by 1e-2
-    loss2 = loss2 * 1e-1 #weight CLIP loss by 1e-1
+    loss1 = loss1 * 1e-1 #weight cycle consistency by 1e-2
+    loss2 = loss2 * 10.0  #weight CLIP loss by 1e-1
+    loss3 = loss3 * 10.0
+    loss_main_g = loss_main_g * 1e1
     lossMainGen = loss1 + loss2 + loss3 + loss_main_g
     return lossMainGen
   if loss_num ==2:    
@@ -47,7 +49,7 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     for i in range(1,len(other_discriminators)):
       pred_other_d += other_discriminators[i](x * parsing_x[i-1])
     pred_other_d = pred_other_d / len(other_discriminators)
-    loss_other_d = (1 - pred_other_d).mean()
+    loss_other_d = (1 - pred_other_d).mean()*1e1
     return loss_other_d
   if loss_num ==3: 
     y = main_gen(x)
@@ -58,7 +60,7 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     loss_main_d_additions = []
     for i in range(1,len(main_discriminators)):
       loss_main_d += main_discriminators[i](y * parsing_y[i-1])
-    loss_main_d = loss_main_d.mean() / len(main_discriminators)
+    loss_main_d = loss_main_d.mean() / len(main_discriminators) * 1e1
     return loss_main_d
 def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess):
   y = main_gen(x.detach())
@@ -115,11 +117,12 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
       return -1
     loss_main_g += main_discriminators[i](y * parsing_y[i-1])
   loss_main_g = - loss_main_g.mean() / len(main_discriminators)
-  loss1 = loss1 * 1e-2 #weight cycle consistency by 1e-2
-  loss2 = loss2 * 1e-1 #weight CLIP loss by 1e-1
-  lossMainGen = loss1 + loss2 + loss3 + loss_main_g
-  lossMainDisc = loss_main_d
-  lossOtherDisc = loss_other_d
+  loss1 = loss1 * 1e-1 #weight cycle consistency by 1e-2
+  loss2 = loss2 * 10.0 #weight CLIP loss by 1e-1
+  loss3 = loss3 * 10.0
+  lossMainGen = loss1 + loss2 + loss3 + loss_main_g*1e1
+  lossMainDisc = loss_main_d *1e1
+  lossOtherDisc = loss_other_d *1e1
   return lossMainGen,lossMainDisc,lossOtherDisc
 
 def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP_model,faceParsingNet,preprocess):
@@ -204,7 +207,7 @@ def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,facePa
 
 # Normalize to [0,1]
 def readDatasets():
-  sketch_data = np.load("./sketches.pickle", allow_pickle =True)/255.0
+  sketch_data =1.0 - np.load("./sketches.pickle", allow_pickle =True)/255.0
   sketch_train = sketch_data[:4000]
   sketch_test = sketch_data[4000:]
   #sketch_train, sketch_test = torch.utils.data.random_split(sketch_data, [4000, 1000]) 

@@ -1,4 +1,14 @@
 .DS_Store
 sketches.pickle
 photos.pt
-./FaceParsingNetwork/checkpoints/pretrained/latest_net_P.pth
+discA0.pt
+discA1.pt
+FaceParsingNetwork/checkpoints/pretrained/latest_net_P.pth
+discA2.pt
+discA3.pt
+discB3.pt
+discB2.pt
+discB1.pt
+discB0.pt
+genB.pt
+genA.pt

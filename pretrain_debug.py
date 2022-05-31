@@ -14,7 +14,6 @@ import cv2
 import pickle as pkl
 import torch.optim as optim
 from torchvision.transforms import transforms
-count = 0
 def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess,loss_num):
   if loss_num == 1:
     y = main_gen(x)
@@ -63,8 +62,7 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
       loss_main_d += main_discriminators[i](y * parsing_y[i-1])
     loss_main_d = loss_main_d.mean() / len(main_discriminators) * 1e1
     return loss_main_d
-def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess):
-  count += 1
+def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess,count):
   y = main_gen(x.detach())
   x_hat = other_gen(y)
   np.save("generated_y"+str(count)+".png", y.detach().cpu().numpy())
@@ -202,15 +200,17 @@ def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,facePa
   [i.eval() for i in discB]
   lossesA = []
   lossesB = [] 
-
+  count = 0
   with torch.no_grad():
     for a in tqdm(testA_loader):
       a = a.cuda()
-      loss = calc_loss(genB, genA, discB, discA, CLIP_model, faceParsingNet, a, preprocess)
+      loss = calc_loss(genB, genA, discB, discA, CLIP_model, faceParsingNet, a, preprocess,count)
+      count +=1
       lossesA.append(tuple([i.item() for i in loss]))
     for b in tqdm(testB_loader):
       b = b.cuda()
-      loss = calc_loss(genA, genB, discA, discB, CLIP_model, faceParsingNet, b, preprocess)
+      loss = calc_loss(genA, genB, discA, discB, CLIP_model, faceParsingNet, b, preprocess,count)
+      count +=1
       lossesB.append(tuple([i.item() for i in loss]))
     return lossesA, lossesB
 
@@ -271,7 +271,7 @@ def getFaceParsingOutput(x,face_parsing_net):
 
 def main():
   torch.autograd.set_detect_anomaly(True)
-  B=8
+  B=1
   epochs = 10
   lr = 1e-3
 

@@ -1,0 +1,302 @@
+Starting Job
+['latest_net_P.pth']
+UnetGenerator(
+  (model): UnetSkipConnectionBlock(
+    (model): Sequential(
+      (0): Conv2d(3, 64, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+      (1): UnetSkipConnectionBlock(
+        (model): Sequential(
+          (0): LeakyReLU(negative_slope=0.2, inplace=True)
+          (1): Conv2d(64, 128, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+          (2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+          (3): UnetSkipConnectionBlock(
+            (model): Sequential(
+              (0): LeakyReLU(negative_slope=0.2, inplace=True)
+              (1): Conv2d(128, 256, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+              (2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+              (3): UnetSkipConnectionBlock(
+                (model): Sequential(
+                  (0): LeakyReLU(negative_slope=0.2, inplace=True)
+                  (1): Conv2d(256, 512, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+                  (2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                  (3): UnetSkipConnectionBlock(
+                    (model): Sequential(
+                      (0): LeakyReLU(negative_slope=0.2, inplace=True)
+                      (1): Conv2d(512, 512, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+                      (2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                      (3): UnetSkipConnectionBlock(
+                        (model): Sequential(
+                          (0): LeakyReLU(negative_slope=0.2, inplace=True)
+                          (1): Conv2d(512, 512, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), bias=False)
+                          (2): ReLU(inplace=True)
+                          (3): ConvTranspose2d(512, 512, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), output_padding=(1, 1), bias=False)
+                          (4): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                        )
+                      )
+                      (4): ReLU(inplace=True)
+                      (5): ConvTranspose2d(1024, 512, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), output_padding=(1, 1), bias=False)
+                      (6): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                      (7): Dropout(p=0.5, inplace=False)
+                    )
+                  )
+                  (4): ReLU(inplace=True)
+                  (5): ConvTranspose2d(1024, 256, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), output_padding=(1, 1), bias=False)
+                  (6): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+                )
+              )
+              (4): ReLU(inplace=True)
+              (5): ConvTranspose2d(512, 128, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), output_padding=(1, 1), bias=False)
+              (6): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+            )
+          )
+          (4): ReLU(inplace=True)
+          (5): ConvTranspose2d(256, 64, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), output_padding=(1, 1), bias=False)
+          (6): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (2): ReLU(inplace=True)
+      (3): ConvTranspose2d(128, 11, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1), output_padding=(1, 1))
+      (4): Tanh()
+    )
+  )
+)
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  2.21it/s]100%|██████████| 1/1 [00:00<00:00,  2.20it/s]
+0 other_discriminator prediction: tensor([0.5076], device='cuda:0')
+tensor([0.5014], device='cuda:0')
+tensor([0.4973], device='cuda:0')
+tensor([0.5015], device='cuda:0')
+0 main_discriminator prediction: tensor([0.4980], device='cuda:0')
+tensor([0.4986], device='cuda:0')
+tensor([0.5003], device='cuda:0')
+tensor([0.4869], device='cuda:0')
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  2.80it/s]100%|██████████| 1/1 [00:00<00:00,  2.80it/s]
+1 other_discriminator prediction: tensor([0.4956], device='cuda:0')
+tensor([0.4986], device='cuda:0')
+tensor([0.5000], device='cuda:0')
+tensor([0.4870], device='cuda:0')
+1 main_discriminator prediction: tensor([0.5070], device='cuda:0')
+tensor([0.5014], device='cuda:0')
+tensor([0.4972], device='cuda:0')
+tensor([0.5016], device='cuda:0')
+Eval Loss: [2.210980494817098, 2.197465101877848]
+0th epoch is starting
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:09<00:00,  9.17s/it]100%|██████████| 1/1 [00:09<00:00,  9.17s/it]
+Train Loss: [array([-3.33418655,  5.04522419,  5.00643349]), array([-5.12337399,  6.87105465,  6.26549339])]
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.22it/s]100%|██████████| 1/1 [00:00<00:00,  3.21it/s]
+0 other_discriminator prediction: tensor([0.0651], device='cuda:0')
+tensor([0.5109], device='cuda:0')
+tensor([0.4291], device='cuda:0')
+tensor([0.4724], device='cuda:0')
+0 main_discriminator prediction: tensor([0.0033], device='cuda:0')
+tensor([0.4488], device='cuda:0')
+tensor([0.4399], device='cuda:0')
+tensor([0.3646], device='cuda:0')
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.22it/s]100%|██████████| 1/1 [00:00<00:00,  3.21it/s]
+1 other_discriminator prediction: tensor([0.6735], device='cuda:0')
+tensor([0.4369], device='cuda:0')
+tensor([0.4447], device='cuda:0')
+tensor([0.3777], device='cuda:0')
+1 main_discriminator prediction: tensor([0.0246], device='cuda:0')
+tensor([0.5145], device='cuda:0')
+tensor([0.4293], device='cuda:0')
+tensor([0.4913], device='cuda:0')
+Eval Loss: [2.466279665629069, 2.247168699900309]
+1th epoch is starting
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:09<00:00,  9.35s/it]100%|██████████| 1/1 [00:09<00:00,  9.35s/it]
+Train Loss: [array([-4.7632618 ,  6.76873779,  6.53705978]), array([-2.13257456,  3.91320086,  2.92874765])]
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.22it/s]100%|██████████| 1/1 [00:00<00:00,  3.21it/s]
+0 other_discriminator prediction: tensor([0.9890], device='cuda:0')
+tensor([0.4617], device='cuda:0')
+tensor([0.3223], device='cuda:0')
+tensor([0.4011], device='cuda:0')
+0 main_discriminator prediction: tensor([0.1077], device='cuda:0')
+tensor([0.4863], device='cuda:0')
+tensor([0.5465], device='cuda:0')
+tensor([0.3204], device='cuda:0')
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.19it/s]100%|██████████| 1/1 [00:00<00:00,  3.18it/s]
+1 other_discriminator prediction: tensor([0.8620], device='cuda:0')
+tensor([0.4863], device='cuda:0')
+tensor([0.5451], device='cuda:0')
+tensor([0.3161], device='cuda:0')
+1 main_discriminator prediction: tensor([1.], device='cuda:0')
+tensor([0.4670], device='cuda:0')
+tensor([0.3298], device='cuda:0')
+tensor([0.4373], device='cuda:0')
+Eval Loss: [1.8263267676035564, 1.9626588821411133]
+2th epoch is starting
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:09<00:00,  9.25s/it]100%|██████████| 1/1 [00:09<00:00,  9.25s/it]
+Train Loss: [array([-5.05683756,  6.74345255,  6.26975775]), array([-1.94349647,  3.51451063,  2.85007358])]
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.19it/s]100%|██████████| 1/1 [00:00<00:00,  3.18it/s]
+0 other_discriminator prediction: tensor([0.9240], device='cuda:0')
+tensor([0.4444], device='cuda:0')
+tensor([0.3275], device='cuda:0')
+tensor([0.3795], device='cuda:0')
+0 main_discriminator prediction: tensor([0.0923], device='cuda:0')
+tensor([0.5659], device='cuda:0')
+tensor([0.7839], device='cuda:0')
+tensor([0.3290], device='cuda:0')
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.19it/s]100%|██████████| 1/1 [00:00<00:00,  3.18it/s]
+1 other_discriminator prediction: tensor([0.8404], device='cuda:0')
+tensor([0.5426], device='cuda:0')
+tensor([0.7545], device='cuda:0')
+tensor([0.3179], device='cuda:0')
+1 main_discriminator prediction: tensor([1.], device='cuda:0')
+tensor([0.4604], device='cuda:0')
+tensor([0.3350], device='cuda:0')
+tensor([0.4199], device='cuda:0')
+Eval Loss: [1.8532517751057942, 1.7573256492614746]
+3th epoch is starting
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:09<00:00,  9.25s/it]100%|██████████| 1/1 [00:09<00:00,  9.25s/it]
+Train Loss: [array([-4.42991829,  5.74864435,  6.09239483]), array([-1.98567557,  3.72649407,  2.66611457])]
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.19it/s]100%|██████████| 1/1 [00:00<00:00,  3.18it/s]
+0 other_discriminator prediction: tensor([0.7468], device='cuda:0')
+tensor([0.4072], device='cuda:0')
+tensor([0.3443], device='cuda:0')
+tensor([0.3743], device='cuda:0')
+0 main_discriminator prediction: tensor([0.6107], device='cuda:0')
+tensor([0.5621], device='cuda:0')
+tensor([0.7947], device='cuda:0')
+tensor([0.4240], device='cuda:0')
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.23it/s]100%|██████████| 1/1 [00:00<00:00,  3.22it/s]
+1 other_discriminator prediction: tensor([0.8179], device='cuda:0')
+tensor([0.5720], device='cuda:0')
+tensor([0.7602], device='cuda:0')
+tensor([0.4092], device='cuda:0')
+1 main_discriminator prediction: tensor([1.0000], device='cuda:0')
+tensor([0.4286], device='cuda:0')
+tensor([0.3392], device='cuda:0')
+tensor([0.3835], device='cuda:0')
+Eval Loss: [1.958504358927409, 1.657399336496989]
+4th epoch is starting
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:09<00:00,  9.00s/it]100%|██████████| 1/1 [00:09<00:00,  9.01s/it]
+Train Loss: [array([-4.61552906,  5.4793601 ,  5.72323322]), array([-2.30170655,  3.9405241 ,  2.60529757])]
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.26it/s]100%|██████████| 1/1 [00:00<00:00,  3.25it/s]
+0 other_discriminator prediction: tensor([0.4835], device='cuda:0')
+tensor([0.3713], device='cuda:0')
+tensor([0.3539], device='cuda:0')
+tensor([0.3587], device='cuda:0')
+0 main_discriminator prediction: tensor([0.4756], device='cuda:0')
+tensor([0.7102], device='cuda:0')
+tensor([0.8378], device='cuda:0')
+tensor([0.5573], device='cuda:0')
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.21it/s]100%|██████████| 1/1 [00:00<00:00,  3.20it/s]
+1 other_discriminator prediction: tensor([0.6915], device='cuda:0')
+tensor([0.7031], device='cuda:0')
+tensor([0.7912], device='cuda:0')
+tensor([0.5352], device='cuda:0')
+1 main_discriminator prediction: tensor([0.9999], device='cuda:0')
+tensor([0.3862], device='cuda:0')
+tensor([0.3696], device='cuda:0')
+tensor([0.3791], device='cuda:0')
+Eval Loss: [2.197542190551758, 1.5149958928426106]
+5th epoch is starting
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:09<00:00,  9.30s/it]100%|██████████| 1/1 [00:09<00:00,  9.30s/it]
+Train Loss: [array([-4.16430616,  3.90970659,  5.2957387 ]), array([-2.39573646,  3.65541315,  2.54803419])]
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.22it/s]100%|██████████| 1/1 [00:00<00:00,  3.21it/s]
+0 other_discriminator prediction: tensor([0.0513], device='cuda:0')
+tensor([0.3173], device='cuda:0')
+tensor([0.3531], device='cuda:0')
+tensor([0.3728], device='cuda:0')
+0 main_discriminator prediction: tensor([0.1179], device='cuda:0')
+tensor([0.9025], device='cuda:0')
+tensor([0.8505], device='cuda:0')
+tensor([0.6292], device='cuda:0')
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.20it/s]100%|██████████| 1/1 [00:00<00:00,  3.19it/s]
+1 other_discriminator prediction: tensor([0.7058], device='cuda:0')
+tensor([0.8585], device='cuda:0')
+tensor([0.7987], device='cuda:0')
+tensor([0.6179], device='cuda:0')
+1 main_discriminator prediction: tensor([0.9998], device='cuda:0')
+tensor([0.3273], device='cuda:0')
+tensor([0.3604], device='cuda:0')
+tensor([0.4048], device='cuda:0')
+Eval Loss: [2.61642058690389, 1.3014296690622966]
+6th epoch is starting
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:09<00:00,  9.08s/it]100%|██████████| 1/1 [00:09<00:00,  9.08s/it]
+Train Loss: [array([-2.64161015,  3.47348189,  4.6395154 ]), array([-2.11937189,  3.66418171,  2.39659548])]
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.24it/s]100%|██████████| 1/1 [00:00<00:00,  3.23it/s]
+0 other_discriminator prediction: tensor([0.0001], device='cuda:0')
+tensor([0.1973], device='cuda:0')
+tensor([0.3519], device='cuda:0')
+tensor([0.4030], device='cuda:0')
+0 main_discriminator prediction: tensor([0.0166], device='cuda:0')
+tensor([0.8367], device='cuda:0')
+tensor([0.8959], device='cuda:0')
+tensor([0.8159], device='cuda:0')
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.21it/s]100%|██████████| 1/1 [00:00<00:00,  3.19it/s]
+1 other_discriminator prediction: tensor([0.7205], device='cuda:0')
+tensor([0.7680], device='cuda:0')
+tensor([0.8488], device='cuda:0')
+tensor([0.7838], device='cuda:0')
+1 main_discriminator prediction: tensor([0.7703], device='cuda:0')
+tensor([0.2260], device='cuda:0')
+tensor([0.3601], device='cuda:0')
+tensor([0.4404], device='cuda:0')
+Eval Loss: [2.7107033729553223, 1.1786081790924072]
+7th epoch is starting
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:09<00:00,  9.14s/it]100%|██████████| 1/1 [00:09<00:00,  9.14s/it]
+Train Loss: [array([-2.1472187 ,  2.91031361,  3.80338788]), array([-2.05289388,  3.71105146,  2.33504105])]
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.21it/s]100%|██████████| 1/1 [00:00<00:00,  3.20it/s]
+0 other_discriminator prediction: tensor([2.9003e-06], device='cuda:0')
+tensor([0.0637], device='cuda:0')
+tensor([0.3524], device='cuda:0')
+tensor([0.4425], device='cuda:0')
+0 main_discriminator prediction: tensor([0.0465], device='cuda:0')
+tensor([0.7520], device='cuda:0')
+tensor([0.8906], device='cuda:0')
+tensor([0.8366], device='cuda:0')
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.24it/s]100%|██████████| 1/1 [00:00<00:00,  3.23it/s]
+1 other_discriminator prediction: tensor([0.7336], device='cuda:0')
+tensor([0.6584], device='cuda:0')
+tensor([0.8403], device='cuda:0')
+tensor([0.7825], device='cuda:0')
+1 main_discriminator prediction: tensor([0.0914], device='cuda:0')
+tensor([0.1117], device='cuda:0')
+tensor([0.3571], device='cuda:0')
+tensor([0.4870], device='cuda:0')
+Eval Loss: [2.786566416422526, 1.2691845496495564]
+8th epoch is starting
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:09<00:00,  9.41s/it]100%|██████████| 1/1 [00:09<00:00,  9.41s/it]
+Train Loss: [array([-1.70137477,  2.58909464,  3.36883116]), array([-1.95692182,  3.59015036,  2.07200575])]
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.14it/s]100%|██████████| 1/1 [00:00<00:00,  3.13it/s]
+0 other_discriminator prediction: tensor([1.7636e-06], device='cuda:0')
+tensor([0.0140], device='cuda:0')
+tensor([0.3547], device='cuda:0')
+tensor([0.3899], device='cuda:0')
+0 main_discriminator prediction: tensor([0.0922], device='cuda:0')
+tensor([0.7526], device='cuda:0')
+tensor([0.8665], device='cuda:0')
+tensor([0.9024], device='cuda:0')
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.24it/s]100%|██████████| 1/1 [00:00<00:00,  3.23it/s]
+1 other_discriminator prediction: tensor([0.7680], device='cuda:0')
+tensor([0.6368], device='cuda:0')
+tensor([0.8141], device='cuda:0')
+tensor([0.8323], device='cuda:0')
+1 main_discriminator prediction: tensor([0.0255], device='cuda:0')
+tensor([0.0762], device='cuda:0')
+tensor([0.3561], device='cuda:0')
+tensor([0.4453], device='cuda:0')
+Eval Loss: [2.8775925636291504, 1.2410099109013875]
+9th epoch is starting
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:09<00:00,  9.14s/it]100%|██████████| 1/1 [00:09<00:00,  9.14s/it]
+Train Loss: [array([-1.75116181,  2.43798399,  3.21678829]), array([-1.92724144,  3.33045745,  2.08846855])]
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.19it/s]100%|██████████| 1/1 [00:00<00:00,  3.18it/s]
+0 other_discriminator prediction: tensor([7.5555e-06], device='cuda:0')
+tensor([0.0041], device='cuda:0')
+tensor([0.3509], device='cuda:0')
+tensor([0.2164], device='cuda:0')
+0 main_discriminator prediction: tensor([0.1681], device='cuda:0')
+tensor([0.7339], device='cuda:0')
+tensor([0.9109], device='cuda:0')
+tensor([0.9797], device='cuda:0')
+  0%|          | 0/1 [00:00<?, ?it/s]100%|██████████| 1/1 [00:00<00:00,  3.19it/s]100%|██████████| 1/1 [00:00<00:00,  3.18it/s]
+1 other_discriminator prediction: tensor([0.7962], device='cuda:0')
+tensor([0.6159], device='cuda:0')
+tensor([0.8468], device='cuda:0')
+tensor([0.9227], device='cuda:0')
+1 main_discriminator prediction: tensor([0.0524], device='cuda:0')
+tensor([0.0901], device='cuda:0')
+tensor([0.3525], device='cuda:0')
+tensor([0.3211], device='cuda:0')
+Eval Loss: [3.0581816037495932, 1.136845350265503]
+slurmstepd: error: Exceeded step memory limit at some point.

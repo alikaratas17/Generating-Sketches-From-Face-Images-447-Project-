@@ -57,14 +57,16 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     # For main_discriminators y is fake data
     y = main_gen(x)
     loss_main_d = main_discriminators[0](y)
+    loss_main_d_additions = []
     for i in range(1,len(main_discriminators)):
       loss_main_d += main_discriminators[i](y * parsing_y[i-1])
     loss_main_d = loss_main_d.mean() / len(main_discriminators) * 1e1
     return loss_main_d
-
-def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess):
+def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess,count):
   y = main_gen(x.detach())
   x_hat = other_gen(y)
+  np.save("generated_y"+str(count)+".png", y.detach().cpu().numpy())
+  np.save("generated_xhat"+str(count)+".png", x_hat.detach().cpu().numpy())
   parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
   parsing_y, features_y = getFaceParsingOutput(y,faceParsingNet)
   if x.shape != x_hat.shape:
@@ -90,23 +92,29 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   loss3 = torch.square(features_x - features_y).mean() #L2 distance of Face Parsing Net Features/Embeddings
   # For other_discriminators x is real data
   pred_other_d = other_discriminators[0](x) 
+  print(f"{count} other_discriminator prediction: {pred_other_d}")
   for i in range(1,len(other_discriminators)):
     if x.shape != parsing_x[i-1].shape:
       print("{} != {} in calc_loss x * parsing_x[i-1]".format(x.shape,parsing_x[i-1].shape))
       return -1
     pred_other_d += other_discriminators[i](x * parsing_x[i-1])
+    print(f"{other_discriminators[i](x * parsing_x[i-1])}")
   pred_other_d = pred_other_d / len(other_discriminators)
   loss_other_d = (1 - pred_other_d).mean()
  
   # For main_discriminators y is fake data
   y2 = main_gen(x.detach())
   loss_main_d = main_discriminators[0](y2)
+  print(f"{count} main_discriminator prediction: {loss_main_d}")
+
   loss_main_d_additions = []
   for i in range(1,len(main_discriminators)):
     if y2.shape != parsing_y[i-1].shape:
       print("{} != {} in calc_loss y * parsing_y[i-1]".format(y2.shape,parsing_y[i-1].shape))
       return -1
     loss_main_d += main_discriminators[i](y2 * parsing_y[i-1])
+    print(f"{main_discriminators[i](y2 * parsing_y[i-1])}")
+
   loss_main_d = loss_main_d.mean() / len(main_discriminators)
   # For main_gen main_discriminators will give adversarial loss -> use - main_disc loss
   
@@ -192,15 +200,17 @@ def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,facePa
   [i.eval() for i in discB]
   lossesA = []
   lossesB = [] 
-
+  count = 0
   with torch.no_grad():
     for a in tqdm(testA_loader):
       a = a.cuda()
-      loss = calc_loss(genB, genA, discB, discA, CLIP_model, faceParsingNet, a, preprocess)
+      loss = calc_loss(genB, genA, discB, discA, CLIP_model, faceParsingNet, a, preprocess,count)
+      count +=1
       lossesA.append(tuple([i.item() for i in loss]))
     for b in tqdm(testB_loader):
       b = b.cuda()
-      loss = calc_loss(genA, genB, discA, discB, CLIP_model, faceParsingNet, b, preprocess)
+      loss = calc_loss(genA, genB, discA, discB, CLIP_model, faceParsingNet, b, preprocess,count)
+      count +=1
       lossesB.append(tuple([i.item() for i in loss]))
     return lossesA, lossesB
 
@@ -234,22 +244,22 @@ def readDatasets():
 def getGenerators():
   a = Generator(1,3) #sketch->photo
   b = Generator(3,1) #photo->sketch
-  if "genA.pt" in os.listdir("."):
-    a.load_state_dict(torch.load("./genA.pt"))
-    print("loaded")
-  if "genB.pt" in os.listdir("."):
-    b.load_state_dict(torch.load("./genB.pt"))
+  #if "genA.pt" in os.listdir("."):
+    #a.load_state_dict(torch.load("./genA.pt"))
+    #print("loaded")
+  #if "genB.pt" in os.listdir("."):
+    #b.load_state_dict(torch.load("./genB.pt"))
   return a, b
 
 def getDiscriminators(num_disc):
   a = [Discriminator(3).cuda() for i in range(num_disc)] #discriminate photo
   b = [Discriminator(1).cuda() for i in range(num_disc)] #discriminate sketch
 
-  for i in range(num_disc):
-    if "discA{}.pt".format(i) in os.listdir("."):
-      a[i].load_state_dict(torch.load("./discA{}.pt".format(i)))
-    if "discB{}.pt".format(i) in os.listdir("."):
-      b[i].load_state_dict(torch.load("./discB{}.pt".format(i)))
+  #for i in range(num_disc):
+    #if "discA{}.pt".format(i) in os.listdir("."):
+      #a[i].load_state_dict(torch.load("./discA{}.pt".format(i)))
+    #if "discB{}.pt".format(i) in os.listdir("."):
+      #b[i].load_state_dict(torch.load("./discB{}.pt".format(i)))
   return a,b
 
 def getFaceParsingOutput(x,face_parsing_net):
@@ -261,16 +271,16 @@ def getFaceParsingOutput(x,face_parsing_net):
 
 def main():
   torch.autograd.set_detect_anomaly(True)
-  B=8
-  epochs = 10
+  B=1
+  epochs = 1000
   lr = 1e-3
 
   #Load Datasets
   train_dataA, test_dataA, train_dataB, test_dataB = readDatasets()
-  #train_dataA = train_dataA[:100]
-  #train_dataB = train_dataB[:100]
-  #test_dataA = test_dataA[:100]
-  #test_dataB= test_dataB[:100]
+  train_dataA = train_dataA[:1]
+  train_dataB = train_dataB[:1]
+  test_dataA = train_dataA[:1]
+  test_dataB= train_dataB[:1]
   
   trainA_loader = data.DataLoader(torch.Tensor(train_dataA),batch_size=B,shuffle=True) 
   trainB_loader = data.DataLoader(torch.Tensor(train_dataB),batch_size=B,shuffle=True)
@@ -318,20 +328,20 @@ def main():
     l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
     eval_losses.append(l)
     print("Eval Loss: {}".format([np.mean(x) for x in l]))
-    if i%4==3:
-      torch.save(genA.state_dict(),"./genA.pt")
-      torch.save(genB.state_dict(),"./genB.pt")
-      for j in range(discriminator_count):
-        torch.save(discriminatorsA[j].state_dict(),"./discA{}.pt".format(j))
-        torch.save(discriminatorsB[j].state_dict(),"./discB{}.pt".format(j))
+    #if i%4==3:
+      #torch.save(genA.state_dict(),"./genA.pt")
+      #torch.save(genB.state_dict(),"./genB.pt")
+      #for j in range(discriminator_count):
+        #torch.save(discriminatorsA[j].state_dict(),"./discA{}.pt".format(j))
+        #torch.save(discriminatorsB[j].state_dict(),"./discB{}.pt".format(j))
 
 
   
-  torch.save(genA.state_dict(),"./genA.pt")
-  torch.save(genB.state_dict(),"./genB.pt")
-  for i in range(discriminator_count):
-    torch.save(discriminatorsA[i].state_dict(),"./discA{}.pt".format(i))
-    torch.save(discriminatorsB[i].state_dict(),"./discB{}.pt".format(i))
+  #torch.save(genA.state_dict(),"./genA.pt")
+  #torch.save(genB.state_dict(),"./genB.pt")
+  #for i in range(discriminator_count):
+    #torch.save(discriminatorsA[i].state_dict(),"./discA{}.pt".format(i))
+    #torch.save(discriminatorsB[i].state_dict(),"./discB{}.pt".format(i))
 
 
 

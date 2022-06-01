@@ -272,7 +272,7 @@ def getFaceParsingOutput(x,face_parsing_net):
 def main():
   torch.autograd.set_detect_anomaly(True)
   B=1
-  epochs = 10
+  epochs = 1000
   lr = 1e-3
 
   #Load Datasets

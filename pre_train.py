@@ -55,11 +55,11 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     # For main_discriminators y is fake data
     y = main_gen(x)
     loss_main_d = main_discriminators[0](y)
-    loss_main_d_additions = []
     for i in range(1,len(main_discriminators)):
       loss_main_d += main_discriminators[i](y * parsing_y[i-1])
     loss_main_d = loss_main_d.mean() / len(main_discriminators)
     return loss_main_d
+
 def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess):
   y = main_gen(x.detach())
   x_hat = other_gen(y)

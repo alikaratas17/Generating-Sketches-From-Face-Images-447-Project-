@@ -18,7 +18,7 @@ from torchvision.transforms import transforms
 import sys
 use_synergy_net = True
 
-def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess,loss_num):
+def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x,bisenet,loss_num):
   if loss_num == 1:
     y = main_gen(x)
     x_hat = other_gen(y)
@@ -35,9 +35,9 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
       clip_x_embed = CLIP_model.encode_image(image_x)
       clip_y_embed = CLIP_model.encode_image(image_y)
       loss2 = torch.sqrt(torch.square(clip_x_embed - clip_y_embed).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()  # L2 distance of CLIP embeddings
-      #loss3 = torch.sqrt(torch.square(features_x - features_y).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()  #L2 distance of Face Parsing Net Features/Embeddings change to bisenet
-      #if use_synergy_net
-      loss3 = 0.0
+      bisenet_x = getBisenetOutput(x, bisenet)
+      bisenet_y = getBisenetOutput(y.repeat(1,3,1,1), bisenet)
+      loss3 = torch.sqrt(torch.square(bisenet_x - bisenet_y).view(bisenet_x.shape[0], -1).mean(dim=1)).mean()  # L2 distance of bisenet embeddings
     else:
       loss2 = 0.0
       loss3 = 0.0
@@ -73,7 +73,7 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     return loss_main_d
 
 
-def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP_model,faceParsingNet,preprocess):
+def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP_model,faceParsingNet,bisenet):
   genA.train()
   genB.train()
   [i.train() for i in discA]
@@ -88,7 +88,7 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossG = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,preprocess,1)
+    lossG = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,bisenet,1)
     lossG.backward()
     optimizerGenB.step()
     optimizerGenA.step()
@@ -96,14 +96,14 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossD_1 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,preprocess,3)
+    lossD_1 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,bisenet,3)
     lossD_1.backward()
     optimizerDiscB.step()
     optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossD_2 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,preprocess,2)
+    lossD_2 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,bisenet,2)
     lossD_2.backward()
     optimizerDiscA.step()
     lossesA.append((lossG.item(),lossD_1.item(),lossD_2.item()))
@@ -114,7 +114,7 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossG = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,preprocess,1)
+    lossG = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,bisenet,1)
     lossG.backward()
     optimizerGenA.step()
     optimizerGenB.step()
@@ -122,14 +122,14 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossD_1 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,preprocess,3)
+    lossD_1 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,bisenet,3)
     lossD_1.backward()
     optimizerDiscA.step()
     optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossD_2 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,preprocess,2)
+    lossD_2 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,bisenet,2)
     lossD_2.backward()
     optimizerDiscB.step()
     lossesB.append((lossG.item(),lossD_1.item(),lossD_2.item()))
@@ -191,6 +191,9 @@ def getFaceParsingOutput(x,face_parsing_net):
   parsing, features = face_parsing_net(x)
   return getMasksFromParsing(parsing, x_shape==3), features
 
+def getBisenetOutput(x, bisenet):
+  return bisenet(x)
+
 def main():
   torch.autograd.set_detect_anomaly(True)
   B=8
@@ -242,7 +245,7 @@ def main():
   train_losses = []
   for i in range(epochs):
     print("{}th epoch is starting".format(i))
-    l = train(genA,genB,discriminatorsA,discriminatorsB,iter(trainA_loader),iter(trainB_loader),optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,preprocess)
+    l = train(genA,genB,discriminatorsA,discriminatorsB,iter(trainA_loader),iter(trainB_loader),optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,bisenet)
     train_losses.append(l)
     print("Train Loss: {}".format([np.array(x).mean(axis=0) for x in l]))
 

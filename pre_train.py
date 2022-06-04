@@ -21,17 +21,21 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
     parsing_y, features_y = getFaceParsingOutput(y,faceParsingNet)
     loss1 = (x - x_hat).mean() # L1 distance cycle consistency
-    image_x = x[:,:,16:-16,16:-16].cuda()
-    image_y = y[:,:,16:-16,16:-16].cuda()
-    if image_x.shape[1]==1:
-      image_x = image_x.repeat(1,3,1,1)
-    else:
-      image_y = image_y.repeat(1,3,1,1)
-    clip_x_embed = CLIP_model.encode_image(image_x)
-    clip_y_embed = CLIP_model.encode_image(image_y)
-    loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
+    if x.shape[1]==3:
+      image_x = x[:,:,16:-16,16:-16].cuda()
+      image_y = y[:,:,16:-16,16:-16].cuda()
+      if image_x.shape[1]==1:
+        image_x = image_x.repeat(1,3,1,1)
+      else:
+        image_y = image_y.repeat(1,3,1,1)
+      clip_x_embed = CLIP_model.encode_image(image_x)
+      clip_y_embed = CLIP_model.encode_image(image_y)
+      loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
 
-    loss3 = torch.square(features_x - features_y).mean() #L2 distance of Face Parsing Net Features/Embeddings
+      loss3 = torch.square(features_x - features_y).mean() #L2 distance of Face Parsing Net Features/Embeddings
+    else:
+      loss2 = 0.0
+      loss3 = 0.0
     loss_main_g = main_discriminators[0](y)
     for i in range(1,len(main_discriminators)):
       loss_main_g += main_discriminators[i](y * parsing_y[i-1])
@@ -39,7 +43,7 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     loss1 = loss1 * 1e-1 #weight cycle consistency by 1e-2
     loss2 = loss2 * 10.0  #weight CLIP loss by 1e-1
     loss3 = loss3 * 10.0
-    loss_main_g = loss_main_g * 1e2
+    loss_main_g = loss_main_g * 1e1
     lossMainGen = loss1 + loss2 + loss3 + loss_main_g
     return lossMainGen
   if loss_num ==2:    
@@ -49,7 +53,7 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     for i in range(1,len(other_discriminators)):
       pred_other_d += other_discriminators[i](x * parsing_x[i-1])
     pred_other_d = pred_other_d / len(other_discriminators)
-    loss_other_d = (1 - pred_other_d).mean()*1e2
+    loss_other_d = (1 - pred_other_d).mean()*1e1
     return loss_other_d
   if loss_num ==3: 
     y = main_gen(x)
@@ -59,7 +63,7 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     loss_main_d = main_discriminators[0](y)
     for i in range(1,len(main_discriminators)):
       loss_main_d += main_discriminators[i](y * parsing_y[i-1])
-    loss_main_d = loss_main_d.mean() / len(main_discriminators) * 1e2
+    loss_main_d = loss_main_d.mean() / len(main_discriminators) * 1e1
     return loss_main_d
 
 def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess):
@@ -71,23 +75,27 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
     print("{} != {} in calc_loss x,x_hat shapes".format(x.shape,x_hat.shape))
     return -1
   loss1 = (x - x_hat).mean() # L1 distance cycle consistency
-  image_x = x[:,:,16:-16,16:-16].cuda()
-  image_y = y[:,:,16:-16,16:-16].cuda()
-  if image_x.shape[1]==1:
-    image_x = image_x.repeat(1,3,1,1)
-  else:
-    image_y = image_y.repeat(1,3,1,1)
-  clip_x_embed = CLIP_model.encode_image(image_x)
-  clip_y_embed = CLIP_model.encode_image(image_y)
-  if clip_x_embed.shape != clip_y_embed.shape:
-    print("{} != {} in calc_loss clip_embeds shapes".format(clip_x_embed.shape,clip_y_embed.shape))
-    return -1
-  loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
+  if x.shape[1]==3:
+    image_x = x[:,:,16:-16,16:-16].cuda()
+    image_y = y[:,:,16:-16,16:-16].cuda()
+    if image_x.shape[1]==1:
+      image_x = image_x.repeat(1,3,1,1)
+    else:
+      image_y = image_y.repeat(1,3,1,1)
+    clip_x_embed = CLIP_model.encode_image(image_x)
+    clip_y_embed = CLIP_model.encode_image(image_y)
+    if clip_x_embed.shape != clip_y_embed.shape:
+      print("{} != {} in calc_loss clip_embeds shapes".format(clip_x_embed.shape,clip_y_embed.shape))
+      return -1
+    loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
 
-  if features_x.shape != features_y.shape:
-    print("{} != {} in calc_loss face parsing net features shapes".format(features_x.shape,features_y.shape))
-    return -1
-  loss3 = torch.square(features_x - features_y).mean() #L2 distance of Face Parsing Net Features/Embeddings
+    if features_x.shape != features_y.shape:
+      print("{} != {} in calc_loss face parsing net features shapes".format(features_x.shape,features_y.shape))
+      return -1
+    loss3 = torch.square(features_x - features_y).mean() #L2 distance of Face Parsing Net Features/Embeddings
+  else:
+    loss2 = 0.0
+    loss3 = 0.0
   # For other_discriminators x is real data
   pred_other_d = other_discriminators[0](x) 
   for i in range(1,len(other_discriminators)):
@@ -120,9 +128,9 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   loss1 = loss1 * 1e-1 #weight cycle consistency by 1e-2
   loss2 = loss2 * 10.0 #weight CLIP loss by 1e-1
   loss3 = loss3 * 10.0
-  lossMainGen = loss1 + loss2 + loss3 + loss_main_g*1e2
-  lossMainDisc = loss_main_d *1e2
-  lossOtherDisc = loss_other_d *1e2
+  lossMainGen = loss1 + loss2 + loss3 + loss_main_g*1e1
+  lossMainDisc = loss_main_d *1e1
+  lossOtherDisc = loss_other_d *1e1
   return lossMainGen,lossMainDisc,lossOtherDisc
 
 def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP_model,faceParsingNet,preprocess):
@@ -242,8 +250,8 @@ def getGenerators():
   return a, b
 
 def getDiscriminators(num_disc):
-  a = [Discriminator(3).cuda() for i in range(num_disc)] #discriminate photo
-  b = [Discriminator(1).cuda() for i in range(num_disc)] #discriminate sketch
+  a = [Discriminator(3) for i in range(num_disc)] #discriminate photo
+  b = [Discriminator(1) for i in range(num_disc)] #discriminate sketch
 
   for i in range(num_disc):
     if "discA{}.pt".format(i) in os.listdir("."):
@@ -284,7 +292,9 @@ def main():
   genB = genB.cuda()
   discriminator_count = 4
   discriminatorsA,discriminatorsB = getDiscriminators(discriminator_count)
-
+  for i in range(discriminator_count):
+    discriminatorsA[i] = discriminatorsA[i].cuda()
+    discriminatorsB[i] = discriminatorsB[i].cuda()
   faceParsingNet = getParsingNetwork().cuda()
   #device = "cuda" if torch.cuda.is_available() else "cpu"  
   CLIP,preprocess = clip.load("ViT-B/32",device="cuda", jit=False)

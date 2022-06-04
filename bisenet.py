@@ -134,9 +134,9 @@ class ContextPath(nn.Module):
 class BiSeNet(nn.Module):
   def __init__(self):
     super().__init__()
-    self.spatialPath = SpatialPath(1, 1)
-    self.contextPath = ContextPath(1, 1)
-    self.ffm = FFM(1, 19) #out should be number of classes
+    self.spatialPath = SpatialPath(3, 3)
+    self.contextPath = ContextPath(3, 3)
+    self.ffm = FFM(3, 19) #out should be number of classes
     #for loss calculation:
     self.conv1 = nn.Conv2d(728, 256, kernel_size = 3, stride = 1, padding = 1) 
     self.conv2 = nn.Conv2d(2048, 256, kernel_size = 3, stride = 1, padding = 1)
@@ -146,7 +146,8 @@ class BiSeNet(nn.Module):
     x1 = self.spatialPath(x)
     x2 = self.contextPath(x)[0]
     out = self.ffm(x1, x2)
-    out = F.upsample(out, [256, 256])#F.upsample(out, scale_factor = 8)
+    #out = F.upsample(out, [256, 256])#F.upsample(out, scale_factor = 8)
+    
     return out
 
   def loss(self, input, label):

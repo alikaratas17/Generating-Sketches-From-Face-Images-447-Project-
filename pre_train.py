@@ -30,16 +30,16 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
         image_y = image_y.repeat(1,3,1,1)
       clip_x_embed = CLIP_model.encode_image(image_x)
       clip_y_embed = CLIP_model.encode_image(image_y)
-      loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
-
-      loss3 = torch.square(features_x - features_y).mean() #L2 distance of Face Parsing Net Features/Embeddings
+      loss2 = torch.sqrt(torch.square(clip_x_embed, clip_y_embed).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()  # L2 distance of CLIP embeddings
+      loss3 = torch.sqrt(torch.square(features_x, features_y).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()  #L2 distance of Face Parsing Net Features/Embeddings
     else:
       loss2 = 0.0
       loss3 = 0.0
     loss_main_g = main_discriminators[0](y)
     for i in range(1,len(main_discriminators)):
       loss_main_g += main_discriminators[i](y * parsing_y[i-1])
-    loss_main_g = - loss_main_g.mean() / len(main_discriminators)
+    loss_main_g = loss_main_g / len(main_discriminators)
+    loss_main_g = - (loss_main_g + 1e-12).log().mean() #burcu: olasi problem (bi ust satira demis)
     loss1 = loss1 * 1e-1 #weight cycle consistency by 1e-2
     loss2 = loss2 * 10.0  #weight CLIP loss by 1e-1
     loss3 = loss3 * 10.0
@@ -53,17 +53,17 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     for i in range(1,len(other_discriminators)):
       pred_other_d += other_discriminators[i](x * parsing_x[i-1])
     pred_other_d = pred_other_d / len(other_discriminators)
-    loss_other_d = (1 - pred_other_d).mean()*1e1
+    loss_other_d = (1 - pred_other_d + 1e-12).log().mean() *1e1
     return loss_other_d
   if loss_num ==3: 
     y = main_gen(x)
     parsing_y, features_y = getFaceParsingOutput(y,faceParsingNet)
     # For main_discriminators y is fake data
-    y = main_gen(x)
     loss_main_d = main_discriminators[0](y)
     for i in range(1,len(main_discriminators)):
       loss_main_d += main_discriminators[i](y * parsing_y[i-1])
-    loss_main_d = loss_main_d.mean() / len(main_discriminators) * 1e1
+    loss_main_d = loss_main_d / len(main_discriminators)
+    loss_main_d = (loss_main_d + 1e-12).log().mean() * 1e1
     return loss_main_d
 
 def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess):
@@ -87,7 +87,7 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
     if clip_x_embed.shape != clip_y_embed.shape:
       print("{} != {} in calc_loss clip_embeds shapes".format(clip_x_embed.shape,clip_y_embed.shape))
       return -1
-    loss2 = torch.square(clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
+    loss2 = (clip_x_embed-clip_y_embed).mean() # L2 distance of CLIP embeddings
 
     if features_x.shape != features_y.shape:
       print("{} != {} in calc_loss face parsing net features shapes".format(features_x.shape,features_y.shape))
@@ -151,6 +151,7 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     lossG = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,preprocess,1)
     lossG.backward()
     optimizerGenB.step()
+    optimizerGenA.step()
     optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
@@ -176,6 +177,7 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     lossG = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,preprocess,1)
     lossG.backward()
     optimizerGenA.step()
+    optimizerGenB.step()
     optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
@@ -265,7 +267,8 @@ def getDiscriminators(num_disc):
 def getFaceParsingOutput(x,face_parsing_net):
   x_shape = x.shape[1]
   if x.shape[1]==1:
-    x = x.repeat(1,3,1,1)/3
+    #x = x.repeat(1,3,1,1)/3
+    x = x.repeat(1,3,1,1)
   parsing, features = face_parsing_net(x)
   return getMasksFromParsing(parsing, x_shape==3), features
 
@@ -317,19 +320,19 @@ def main():
   optimizerDiscB = optim.Adam(paramsB,lr = lr)
 
   # Training Loop
-  eval_losses = []
+  #eval_losses = []
   train_losses = []
-  l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
-  eval_losses.append(l)
-  print("Eval Loss: {}".format([np.mean(x) for x in l]))
+  #l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
+  #eval_losses.append(l)
+  #print("Eval Loss: {}".format([np.mean(x) for x in l]))
   for i in range(epochs):
     print("{}th epoch is starting".format(i))
     l = train(genA,genB,discriminatorsA,discriminatorsB,iter(trainA_loader),iter(trainB_loader),optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,preprocess)
     train_losses.append(l)
     print("Train Loss: {}".format([np.array(x).mean(axis=0) for x in l]))
-    l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
-    eval_losses.append(l)
-    print("Eval Loss: {}".format([np.mean(x) for x in l]))
+    #l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
+    #eval_losses.append(l)
+    #print("Eval Loss: {}".format([np.mean(x) for x in l]))
     
     torch.save(genA.state_dict(),"./genA.pt")
     torch.save(genB.state_dict(),"./genB.pt")

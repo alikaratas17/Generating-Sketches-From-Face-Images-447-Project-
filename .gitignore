@@ -12,7 +12,7 @@ discB1.pt
 discB0.pt
 genB.pt
 genA.pt
-bisenet.pt
+BiSeNet/bisenet.pt
 bisenet.sh
 inputs.pt
 labels.pt

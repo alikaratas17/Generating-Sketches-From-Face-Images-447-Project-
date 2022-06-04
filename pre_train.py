@@ -330,20 +330,20 @@ def main():
     l = eval_model(genA,genB,discriminatorsA,discriminatorsB,testA_loader,testB_loader,CLIP,faceParsingNet,preprocess)
     eval_losses.append(l)
     print("Eval Loss: {}".format([np.mean(x) for x in l]))
-    if i%4==3:
-      torch.save(genA.state_dict(),"./genA.pt")
-      torch.save(genB.state_dict(),"./genB.pt")
-      for j in range(discriminator_count):
-        torch.save(discriminatorsA[j].state_dict(),"./discA{}.pt".format(j))
-        torch.save(discriminatorsB[j].state_dict(),"./discB{}.pt".format(j))
+    
+    torch.save(genA.state_dict(),"./genA.pt")
+    torch.save(genB.state_dict(),"./genB.pt")
+    for j in range(discriminator_count):
+      torch.save(discriminatorsA[j].state_dict(),"./discA{}.pt".format(j))
+      torch.save(discriminatorsB[j].state_dict(),"./discB{}.pt".format(j))
 
 
   
-  torch.save(genA.state_dict(),"./genA.pt")
-  torch.save(genB.state_dict(),"./genB.pt")
-  for i in range(discriminator_count):
-    torch.save(discriminatorsA[i].state_dict(),"./discA{}.pt".format(i))
-    torch.save(discriminatorsB[i].state_dict(),"./discB{}.pt".format(i))
+  #torch.save(genA.state_dict(),"./genA.pt")
+  #torch.save(genB.state_dict(),"./genB.pt")
+  #for i in range(discriminator_count):
+  #  torch.save(discriminatorsA[i].state_dict(),"./discA{}.pt".format(i))
+  #  torch.save(discriminatorsB[i].state_dict(),"./discB{}.pt".format(i))
 
 
 

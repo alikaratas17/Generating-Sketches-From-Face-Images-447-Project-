@@ -12,4 +12,14 @@ discB1.pt
 discB0.pt
 genB.pt
 genA.pt
-SynergyNet/pretrained/best.pth.tar
+bisenet.pt
+bisenet.sh
+inputs.pt
+labels.pt
+myjob.sh
+outputs.npy
+xA_samples.pickle
+xB_samples.pickle
+yA_samples.pickle
+yB_samples.pickle
+

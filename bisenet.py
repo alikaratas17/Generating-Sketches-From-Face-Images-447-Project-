@@ -134,9 +134,9 @@ class ContextPath(nn.Module):
 class BiSeNet(nn.Module):
   def __init__(self):
     super().__init__()
-    self.spatialPath = SpatialPath(3, 3)
-    self.contextPath = ContextPath(3, 3)
-    self.ffm = FFM(3, 19) #out should be number of classes
+    self.spatialPath = SpatialPath(1, 1)
+    self.contextPath = ContextPath(1, 1)
+    self.ffm = FFM(1, 19) #out should be number of classes
     #for loss calculation:
     self.conv1 = nn.Conv2d(728, 256, kernel_size = 3, stride = 1, padding = 1) 
     self.conv2 = nn.Conv2d(2048, 256, kernel_size = 3, stride = 1, padding = 1)
@@ -168,14 +168,14 @@ class BiSeNet(nn.Module):
 
     return loss1 + loss2 + loss3
 
-def train(model):
-  """ 
-  inputs = torch.zeros(12000,3,256,256)
+def train(model): 
+  """
+  inputs = torch.zeros(12000,256,256)
   labels = torch.zeros(12000,256,256)
   toTensorTransform = transforms.ToTensor()
   label_names =  ['skin', 'nose', 'eye_g', 'l_eye', 'r_eye', 'l_brow', 'r_brow', 'l_ear', 'r_ear', 'mouth', 'u_lip', 'l_lip', 'hair', 'hat', 'ear_r', 'neck_l', 'neck', 'cloth']
   #init
-  img = Image.open("/datasets/CelebAMask-HQ/CelebA-HQ-img/0.jpg").convert('RGB').resize((256,256))
+  img = Image.open("/datasets/CelebAMask-HQ/CelebA-HQ-img/0.jpg").convert('L').resize((256,256))
   image_tensor = toTensorTransform(img)
   inputs_first = image_tensor
   inputs[0] = inputs_first
@@ -200,7 +200,7 @@ def train(model):
   for i in range(1,12000):
     k = i//2000
     i_str = f'{i:05d}'
-    img = Image.open("/datasets/CelebAMask-HQ/CelebA-HQ-img/{}.jpg".format(i)).convert('RGB').resize((256,256))
+    img = Image.open("/datasets/CelebAMask-HQ/CelebA-HQ-img/{}.jpg".format(i)).convert('L').resize((256,256))
     image_tensor = toTensorTransform(img)
     image_tensor = image_tensor
     inputs[i] = image_tensor
@@ -222,20 +222,21 @@ def train(model):
     
     labels[i] = labels_tensor_tmp
     print(i, flush=True)
+  print(inputs.shape, flush = True)
   torch.save(inputs, "./inputs.pt")
   torch.save(labels, "./labels.pt")
-  return
   """
   B=16
-  inputs = torch.Tensor(torch.load("./inputs.pt")) 
+  inputs = torch.Tensor(torch.load("./inputs.pt")).unsqueeze(1) 
   labels = torch.Tensor(torch.load("./labels.pt"))
   train_inputs_loader = data.DataLoader(inputs,batch_size=B,shuffle=True) 
   train_labels_loader = data.DataLoader(labels,batch_size=B,shuffle=True)  
   lr0 = lr_decay(0)
   optimizer = optim.SGD(model.parameters(), lr=lr0)
   scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda step: lr_decay(step)/lr0)
-
-  for i in range(150):
+  print(inputs.shape)
+  print(labels.shape)
+  for i in range(200):
     train_epochs(i, iter(train_inputs_loader), iter(train_labels_loader), model, optimizer, scheduler)
     if i%50 == 49:
       torch.save(model.state_dict(), "./bisenet.pt")
@@ -264,7 +265,7 @@ def train_epochs(i, iter_inputs, iter_labels, model, optimizer, scheduler):
   scheduler.step()
 
 def lr_decay(global_step,
-    init_learning_rate = 2.48e-2,
+    init_learning_rate = 2.5e-2,
     min_learning_rate = 1e-5,
     decay_rate = 0.9999):
     lr = ((init_learning_rate - min_learning_rate) *
@@ -274,13 +275,13 @@ def lr_decay(global_step,
 
 def main():
     model = BiSeNet()
-    model.load_state_dict(torch.load("./bisenet.pt"))
+    #model.load_state_dict(torch.load("./bisenet.pt"))
     model = model.cuda()
-    sketch_data = (torch.Tensor(np.load("./sketches.pickle", allow_pickle =True)/255.0).repeat(1,3,1,1))
-    inputs = sketch_data[:10]
-    outputs = model(inputs.cuda())
-    np.save("./outputs", outputs.detach().cpu().numpy())  
-    return
+    #sketch_data = (torch.Tensor(np.load("./sketches.pickle", allow_pickle =True)/255.0).repeat(1,3,1,1))
+    #inputs = sketch_data[:10]
+    #outputs = model(inputs.cuda())
+    #np.save("./outputs", outputs.detach().cpu().numpy())  
+    #return
     train(model)
     
 if __name__ == '__main__':

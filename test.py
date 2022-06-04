@@ -16,7 +16,11 @@ import torch.optim as optim
 from torchvision.transforms import transforms
 # Normalize to [0,1]
 def readDatasets():
+<<<<<<< HEAD
   sketch_data =np.load("./sketches.pickle", allow_pickle =True)/255.0
+=======
+  sketch_data = np.load("./sketches.pickle", allow_pickle =True)/255.0
+>>>>>>> c44532042592c15b4a9f6372ac61ee9f9ea39400
   sketch_train = sketch_data[:4000]
   sketch_test = sketch_data[4000:]
   #sketch_train, sketch_test = torch.utils.data.random_split(sketch_data, [4000, 1000]) 

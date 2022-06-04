@@ -215,7 +215,11 @@ def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,facePa
 
 # Normalize to [0,1]
 def readDatasets():
+<<<<<<< HEAD
   sketch_data = np.load("./sketches.pickle", allow_pickle =True)/255.0
+=======
+  sketch_data =  np.load("./sketches.pickle", allow_pickle =True)/255.0
+>>>>>>> c44532042592c15b4a9f6372ac61ee9f9ea39400
   sketch_train = sketch_data[:4000]
   sketch_test = sketch_data[4000:]
   #sketch_train, sketch_test = torch.utils.data.random_split(sketch_data, [4000, 1000]) 
@@ -258,6 +262,8 @@ def getDiscriminators(num_disc):
       a[i].load_state_dict(torch.load("./discA{}.pt".format(i)))
     if "discB{}.pt".format(i) in os.listdir("."):
       b[i].load_state_dict(torch.load("./discB{}.pt".format(i)))
+  a = [x.cuda() for x in a]
+  b = [x.cuda() for x in b]
   return a,b
 
 def getFaceParsingOutput(x,face_parsing_net):
@@ -270,7 +276,7 @@ def getFaceParsingOutput(x,face_parsing_net):
 def main():
   torch.autograd.set_detect_anomaly(True)
   B=8
-  epochs = 10
+  epochs = 1
   lr = 1e-3
 
   #Load Datasets

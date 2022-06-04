@@ -30,8 +30,8 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
         image_y = image_y.repeat(1,3,1,1)
       clip_x_embed = CLIP_model.encode_image(image_x)
       clip_y_embed = CLIP_model.encode_image(image_y)
-      loss2 = torch.sqrt(torch.square(clip_x_embed, clip_y_embed).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()  # L2 distance of CLIP embeddings
-      loss3 = torch.sqrt(torch.square(features_x, features_y).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()  #L2 distance of Face Parsing Net Features/Embeddings
+      loss2 = torch.sqrt(torch.square(clip_x_embed - clip_y_embed).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()  # L2 distance of CLIP embeddings
+      loss3 = torch.sqrt(torch.square(features_x - features_y).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()  #L2 distance of Face Parsing Net Features/Embeddings
     else:
       loss2 = 0.0
       loss3 = 0.0

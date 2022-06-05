@@ -45,6 +45,8 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     loss3 = loss3 * 10.0
     loss_main_g = loss_main_g * 1e1
     lossMainGen = loss1 + loss2 + loss3 + loss_main_g
+    print(loss1.requires_grad)
+    print(loss2.requires_grad)
     return lossMainGen
   if loss_num ==2:    
     parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)

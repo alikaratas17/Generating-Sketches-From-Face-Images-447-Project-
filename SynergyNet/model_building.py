@@ -58,7 +58,7 @@ class I2P(nn.Module):
 class SynergyNet(nn.Module):
 	def __init__(self, args):
 		super(SynergyNet, self).__init__()
-		self.triangles = sio.loadmat('./3dmm_data/tri.mat')['tri'] -1
+		self.triangles = sio.loadmat('./SynergyNet/3dmm_data/tri.mat')['tri'] -1
 		self.triangles = torch.Tensor(self.triangles.astype(np.int)).long().cuda()
 		self.img_size = args['img_size']
 		# Image-to-parameter

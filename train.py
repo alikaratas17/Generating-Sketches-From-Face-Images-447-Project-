@@ -19,7 +19,7 @@ import sys
 from SynergyNet.model_building import SynergyNet
 from SynergyNet.FaceBoxes import FaceBoxes
 #import argparse
-use_synergy_net = True
+use_synergy_net = False
 
 def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, bisenet,SnetModels,loss_num):
   if loss_num == 1:
@@ -38,14 +38,13 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
       clip_x_embed = CLIP_model.encode_image(image_x)
       clip_y_embed = CLIP_model.encode_image(image_y)
       loss2 = torch.sqrt(torch.square(clip_x_embed - clip_y_embed).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()  # L2 distance of CLIP embeddings
-      #loss3 = torch.sqrt(torch.square(features_x - features_y).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()  #L2 distance of Face Parsing Net Features/Embeddings change to bisenet
-      #if use_synergy_net
       if use_synergy_net:
         loss4 = synergynetLoss(SnetModels,x,y)
       else:
         loss4 = 0.0
       bisenet_x = getBisenetOutput(x, bisenet)
       bisenet_y = getBisenetOutput(y.repeat(1,3,1,1), bisenet)
+      #loss3 = 0.0
       loss3 = torch.sqrt(torch.square(bisenet_x - bisenet_y).view(bisenet_x.shape[0], -1).mean(dim=1)).mean()  # L2 distance of bisenet embeddings
     else:
       loss2 = 0.0
@@ -62,7 +61,12 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     loss4 = loss4 * 1.0
     loss_main_g = loss_main_g * 1e1
     lossMainGen = loss1 + loss2 + loss3 + loss4 + loss_main_g
+    print(loss1)
+    print(loss1.requires_grad)
+    print(loss2.requires_grad)
+    print(loss3.requires_grad)
     return lossMainGen
+    #return loss3
   if loss_num ==2:    
     parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
     # For other_discriminators x is real data
@@ -225,38 +229,38 @@ def synergynetLoss(SnetModels,x,y):
   x_samples = torch.zeros(x.shape[0],x.shape[1],120,120)
   y_samples = torch.zeros(x.shape[0],x.shape[1],120,120)
   for i in range(x.shape[0]):
-    x_img = (np.moveaxis(x[i].detach().cpu().numpy(),1,3)*255).astype(np.uint8)
+    x_img = (np.moveaxis(x[i].detach().cpu().numpy(),0,2)*255).astype(np.uint8)
     rectx = face_boxes(x_img)
     #y_img = (np.moveaxis(y[i].detach().numpy(),1,3)*255).astype(np.uint8)
     #recty = face_boxes(y_img)
     rect = rectx[0]
     HCenter = (rect[1] + rect[3])/2
     WCenter = (rect[0] + rect[2])/2
-    Hbeginning  = Int(HCenter) - 60
-    Hend = Hbeginning + 60
+    Hbeginning  = int(HCenter) - 60
+    Hend = Hbeginning + 120
     if Hbeginning < 0:
       Hend -= Hbeginning
       Hbeginning= 0
     if Hend > 255:
       Hbeginning -= (Hend - 255)
       Hend = 255
-    Wbeginning  = Int(WCenter) - 60
-    Wend = Wbeginning + 60
+    Wbeginning  = int(WCenter) - 60
+    Wend = Wbeginning + 120
     if Wbeginning < 0:
       Wend -= Wbeginning
       Wbeginning= 0
     if Wend > 255:
       Wbeginning -= (Wend - 255)
       Wend = 255
-    x_samples[i] = x[i,:,Hbeginning:Hend+1,Wbeginning:Wend+1]
-    y_samples[i] = x[i,:,Hbeginning:Hend+1,Wbeginning:Wend+1]
+    x_samples[i] = x[i,:,Hbeginning:Hend,Wbeginning:Wend]
+    y_samples[i] = x[i,:,Hbeginning:Hend,Wbeginning:Wend]
   x_samples = x_samples.cuda()
   y_samples = y_samples.cuda()
   x_samples = ((x_samples * 255)-127.5)/128
   y_samples = ((y_samples * 255)-127.5)/128
   z_x = model.forward_test(x_samples)
   z_y = model.forward_test(y_samples)
-  return torch.sqrt(torch.square(z_x - z_y).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean() #L2 distance of synergynet outputs
+  return torch.sqrt(torch.square(z_x - z_y).view(z_x.shape[0], -1).mean(dim=1)).mean() #L2 distance of synergynet outputs
 def getBisenetOutput(x, bisenet):
   return bisenet(x)
 

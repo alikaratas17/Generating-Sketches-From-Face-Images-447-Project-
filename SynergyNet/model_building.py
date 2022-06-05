@@ -32,14 +32,14 @@ class I2P(nn.Module):
 		super(I2P, self).__init__()
 		self.args = args
 		# backbone definition
-		if 'mobilenet_v2' in self.args.arch:
-			self.backbone = getattr(mobilenetv2_backbone, args.arch)(pretrained=False)
-		elif 'mobilenet' in self.args.arch:
-			self.backbone = getattr(mobilenetv1_backbone, args.arch)()		
-		elif 'resnet' in self.args.arch:
-			self.backbone = getattr(resnet_backbone, args.arch)(pretrained=False)
-		elif 'ghostnet' in self.args.arch:
-			self.backbone = getattr(ghostnet_backbone, args.arch)()
+		if 'mobilenet_v2' in self.args['arch']:
+			self.backbone = getattr(mobilenetv2_backbone, args['arch'])(pretrained=False)
+		elif 'mobilenet' in self.args['arch']:
+			self.backbone = getattr(mobilenetv1_backbone, args['arch'])()		
+		elif 'resnet' in self.args['arch']:
+			self.backbone = getattr(resnet_backbone, args['arch'])(pretrained=False)
+		elif 'ghostnet' in self.args['arch']:
+			self.backbone = getattr(ghostnet_backbone, args['arch'])()
 		else:
 			raise RuntimeError("Please choose [mobilenet_v2, mobilenet_1, resnet50, or ghostnet]")
 
@@ -60,7 +60,7 @@ class SynergyNet(nn.Module):
 		super(SynergyNet, self).__init__()
 		self.triangles = sio.loadmat('./3dmm_data/tri.mat')['tri'] -1
 		self.triangles = torch.Tensor(self.triangles.astype(np.int)).long().cuda()
-		self.img_size = args.img_size
+		self.img_size = args['img_size']
 		# Image-to-parameter
 		self.I2P = I2P(args)
 		# Forward

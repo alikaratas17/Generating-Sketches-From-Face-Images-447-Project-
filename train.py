@@ -18,7 +18,7 @@ from torchvision.transforms import transforms
 import sys
 from SynergyNet.model_building import SynergyNet
 from SynergyNet.FaceBoxes import FaceBoxes
-import argparse
+#import argparse
 use_synergy_net = True
 
 def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, bisenet,SnetModels,loss_num):
@@ -202,13 +202,13 @@ def getFaceParsingOutput(x,face_parsing_net):
   parsing, features = face_parsing_net(x)
   return getMasksFromParsing(parsing, x_shape==3), features
 def getSynergyNetAndFaceBoxes():
-
-  parser = argparse.ArgumentParser()
-  args = parser.parse_args()
+  
+  args = {}
   # load pre-tained model
   checkpoint_fp = './SynergyNet/pretrained/best.pth.tar' 
-  args.arch = 'mobilenet_v2'
-  args.devices_id = [0]
+  args['arch'] = 'mobilenet_v2'
+  args['devices_id'] = [0]
+  args['img_size'] = 120
   checkpoint = torch.load(checkpoint_fp, map_location=lambda storage, loc: storage)['state_dict']
   model = SynergyNet(args)
   model_dict = model.state_dict()

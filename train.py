@@ -20,7 +20,7 @@ from .SynergyNet.model_building import SynergyNet
 from .SynergyNet.FaceBoxes import FaceBoxes
 use_synergy_net = True
 
-def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, SnetModels,loss_num):
+def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, bisenet,SnetModels,loss_num):
   if loss_num == 1:
     y = main_gen(x)
     x_hat = other_gen(y)
@@ -44,6 +44,9 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
       else:
         loss4 = 0.0
       loss3 = 0.0
+      bisenet_x = getBisenetOutput(x, bisenet)
+      bisenet_y = getBisenetOutput(y.repeat(1,3,1,1), bisenet)
+      loss3 = torch.sqrt(torch.square(bisenet_x - bisenet_y).view(bisenet_x.shape[0], -1).mean(dim=1)).mean()  # L2 distance of bisenet embeddings
     else:
       loss2 = 0.0
       loss3 = 0.0
@@ -81,7 +84,7 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     return loss_main_d
 
 
-def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP_model,faceParsingNet,SnetModels):
+def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP_model,faceParsingNet,bisenet,SnetModels):
   genA.train()
   genB.train()
   [i.train() for i in discA]
@@ -96,7 +99,7 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossG = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,SnetModels,1)
+    lossG = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,bisenet,SnetModels,1)
     lossG.backward()
     optimizerGenB.step()
     optimizerGenA.step()
@@ -104,14 +107,14 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossD_1 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,SnetModels,3)
+    lossD_1 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,bisenet,SnetModels,3)
     lossD_1.backward()
     optimizerDiscB.step()
     optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossD_2 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,SnetModels,2)
+    lossD_2 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,bisenet,SnetModels,2)
     lossD_2.backward()
     optimizerDiscA.step()
     lossesA.append((lossG.item(),lossD_1.item(),lossD_2.item()))
@@ -122,7 +125,7 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossG = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,SnetModels,1)
+    lossG = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,bisenet,SnetModels,1)
     lossG.backward()
     optimizerGenA.step()
     optimizerGenB.step()
@@ -130,14 +133,14 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossD_1 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,SnetModels,3)
+    lossD_1 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,bisenet,SnetModels,3)
     lossD_1.backward()
     optimizerDiscA.step()
     optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossD_2 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,SnetModels,2)
+    lossD_2 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,bisenet,SnetModels,2)
     lossD_2.backward()
     optimizerDiscB.step()
     lossesB.append((lossG.item(),lossD_1.item(),lossD_2.item()))
@@ -253,7 +256,10 @@ def synergynetLoss(SnetModels,x,y):
   y_samples = (y_samples * 255)-127.5)/128
   z_x = model.forward_test(x_samples)
   z_y = model.forward_test(y_samples)
-  return torch.sqrt(torch.square(z_x - z_y).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()
+  return torch.sqrt(torch.square(z_x - z_y).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean() #L2 distance of synergynet outputs
+def getBisenetOutput(x, bisenet):
+  return bisenet(x)
+
 def main():
   torch.autograd.set_detect_anomaly(True)
   B=8
@@ -306,7 +312,7 @@ def main():
   train_losses = []
   for i in range(epochs):
     print("{}th epoch is starting".format(i))
-    l = train(genA,genB,discriminatorsA,discriminatorsB,iter(trainA_loader),iter(trainB_loader),optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,SnetModels)
+    l = train(genA,genB,discriminatorsA,discriminatorsB,iter(trainA_loader),iter(trainB_loader),optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,bisenet,SnetModels)
     train_losses.append(l)
     print("Train Loss: {}".format([np.array(x).mean(axis=0) for x in l]))
 

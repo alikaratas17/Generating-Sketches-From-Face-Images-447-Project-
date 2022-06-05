@@ -140,7 +140,6 @@ class BiSeNet(nn.Module):
     #for loss calculation:
     self.conv1 = nn.Conv2d(728, 256, kernel_size = 3, stride = 1, padding = 1) 
     self.conv2 = nn.Conv2d(2048, 256, kernel_size = 3, stride = 1, padding = 1)
-    
 
   def forward(self, x):
     x1 = self.spatialPath(x)
@@ -276,7 +275,7 @@ def lr_decay(global_step,
 
 def main():
     model = BiSeNet()
-    #model.load_state_dict(torch.load("./bisenet.pt"))
+    model.load_state_dict(torch.load("./bisenet.pt"))
     model = model.cuda()
     #sketch_data = (torch.Tensor(np.load("./sketches.pickle", allow_pickle =True)/255.0).repeat(1,3,1,1))
     #inputs = sketch_data[:10]

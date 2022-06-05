@@ -16,9 +16,11 @@ import pickle as pkl
 import torch.optim as optim
 from torchvision.transforms import transforms
 import sys
+from .SynergyNet.model_building import SynergyNet
+from .SynergyNet.FaceBoxes import FaceBoxes
 use_synergy_net = True
 
-def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess,loss_num):
+def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, SnetModels,loss_num):
   if loss_num == 1:
     y = main_gen(x)
     x_hat = other_gen(y)
@@ -37,10 +39,15 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
       loss2 = torch.sqrt(torch.square(clip_x_embed - clip_y_embed).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()  # L2 distance of CLIP embeddings
       #loss3 = torch.sqrt(torch.square(features_x - features_y).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()  #L2 distance of Face Parsing Net Features/Embeddings change to bisenet
       #if use_synergy_net
+      if use_synergy_net:
+        loss4 = synergynetLoss(SnetModels,x,y)
+      else:
+        loss4 = 0.0
       loss3 = 0.0
     else:
       loss2 = 0.0
       loss3 = 0.0
+      loss4 = 0.0
     loss_main_g = main_discriminators[0](y)
     for i in range(1,len(main_discriminators)):
       loss_main_g += main_discriminators[i](y * parsing_y[i-1])
@@ -49,8 +56,9 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     loss1 = loss1 * 1e-1 #weight cycle consistency by 1e-2
     loss2 = loss2 * 10.0  #weight CLIP loss by 1e-1
     loss3 = loss3 * 10.0
+    loss4 = loss4 * 1e1
     loss_main_g = loss_main_g * 1e1
-    lossMainGen = loss1 + loss2 + loss3 + loss_main_g
+    lossMainGen = loss1 + loss2 + loss3 + loss4 + loss_main_g
     return lossMainGen
   if loss_num ==2:    
     parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
@@ -73,7 +81,7 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     return loss_main_d
 
 
-def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP_model,faceParsingNet,preprocess):
+def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP_model,faceParsingNet,SnetModels):
   genA.train()
   genB.train()
   [i.train() for i in discA]
@@ -88,7 +96,7 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossG = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,preprocess,1)
+    lossG = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,SnetModels,1)
     lossG.backward()
     optimizerGenB.step()
     optimizerGenA.step()
@@ -96,14 +104,14 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossD_1 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,preprocess,3)
+    lossD_1 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,SnetModels,3)
     lossD_1.backward()
     optimizerDiscB.step()
     optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossD_2 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,preprocess,2)
+    lossD_2 = calc_loss_train(genB,genA,discB,discA,CLIP_model,faceParsingNet,a,SnetModels,2)
     lossD_2.backward()
     optimizerDiscA.step()
     lossesA.append((lossG.item(),lossD_1.item(),lossD_2.item()))
@@ -114,7 +122,7 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossG = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,preprocess,1)
+    lossG = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,SnetModels,1)
     lossG.backward()
     optimizerGenA.step()
     optimizerGenB.step()
@@ -122,14 +130,14 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossD_1 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,preprocess,3)
+    lossD_1 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,SnetModels,3)
     lossD_1.backward()
     optimizerDiscA.step()
     optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
     optimizerDiscB.zero_grad()
-    lossD_2 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,preprocess,2)
+    lossD_2 = calc_loss_train(genA,genB,discA,discB,CLIP_model,faceParsingNet,b,SnetModels,2)
     lossD_2.backward()
     optimizerDiscB.step()
     lossesB.append((lossG.item(),lossD_1.item(),lossD_2.item()))
@@ -190,7 +198,62 @@ def getFaceParsingOutput(x,face_parsing_net):
     x = x.repeat(1,3,1,1)
   parsing, features = face_parsing_net(x)
   return getMasksFromParsing(parsing, x_shape==3), features
+def getSynergyNetAndFaceBoxes():
 
+  parser = argparse.ArgumentParser()
+  args = parser.parse_args()
+  # load pre-tained model
+  checkpoint_fp = './SynergyNet/pretrained/best.pth.tar' 
+  args.arch = 'mobilenet_v2'
+  args.devices_id = [0]
+  checkpoint = torch.load(checkpoint_fp, map_location=lambda storage, loc: storage)['state_dict']
+  model = SynergyNet(args)
+  model_dict = model.state_dict()
+  # because the model is trained by multiple gpus, prefix 'module' should be removed
+  for k in checkpoint.keys():
+    model_dict[k.replace('module.', '')] = checkpoint[k]
+  model.load_state_dict(model_dict, strict=False)
+  model = model.cuda()
+  # face detector
+  face_boxes = FaceBoxes()
+  return model,face_boxes
+def synergynetLoss(SnetModels,x,y):
+  model,face_boxes  = SnetModels
+  x_samples = torch.zeros(x.shape[0],x.shape[1],120,120)
+  y_samples = torch.zeros(x.shape[0],x.shape[1],120,120)
+  for i in range(x.shape[0]):
+    x_img = (np.moveaxis(x[i].detach().cpu().numpy(),1,3)*255).astype(np.uint8)
+    rectx = face_boxes(x_img)
+    #y_img = (np.moveaxis(y[i].detach().numpy(),1,3)*255).astype(np.uint8)
+    #recty = face_boxes(y_img)
+    rect = rectx[0]
+    HCenter = (rect[1] + rect[3])/2
+    WCenter = (rect[0] + rect[2])/2
+    Hbeginning  = Int(HCenter) - 60
+    Hend = Hbeginning + 60
+    if Hbeginning < 0:
+      Hend -= Hbeginning
+      Hbeginning= 0
+    if Hend > 255:
+      Hbeginning -= (Hend - 255)
+      Hend = 255
+    Wbeginning  = Int(WCenter) - 60
+    Wend = Wbeginning + 60
+    if Wbeginning < 0:
+      Wend -= Wbeginning
+      Wbeginning= 0
+    if Wend > 255:
+      Wbeginning -= (Wend - 255)
+      Wend = 255
+    x_samples[i] = x[i,:,Hbeginning:Hend+1,Wbeginning:Wend+1]
+    y_samples[i] = x[i,:,Hbeginning:Hend+1,Wbeginning:Wend+1]
+  x_samples = x_samples.cuda()
+  y_samples = y_samples.cuda()
+  x_samples = (x_samples * 255)-127.5)/128
+  y_samples = (y_samples * 255)-127.5)/128
+  z_x = model.forward_test(x_samples)
+  z_y = model.forward_test(y_samples)
+  return torch.sqrt(torch.square(z_x - z_y).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean()
 def main():
   torch.autograd.set_detect_anomaly(True)
   B=8
@@ -224,6 +287,7 @@ def main():
   CLIP,preprocess = clip.load("ViT-B/32",device="cuda", jit=False)
   clip.model.convert_weights(CLIP) # use CLIP.encode_image() for clip loss
   bisenet = BiSeNet().cuda()
+  SnetModels = getSynergyNetAndFaceBoxes()
   #print("genA : {}".format(genA))
   #print("genB : {}".format(genB))
   # Init Optimizers
@@ -242,7 +306,7 @@ def main():
   train_losses = []
   for i in range(epochs):
     print("{}th epoch is starting".format(i))
-    l = train(genA,genB,discriminatorsA,discriminatorsB,iter(trainA_loader),iter(trainB_loader),optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,preprocess)
+    l = train(genA,genB,discriminatorsA,discriminatorsB,iter(trainA_loader),iter(trainB_loader),optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP,faceParsingNet,SnetModels)
     train_losses.append(l)
     print("Train Loss: {}".format([np.array(x).mean(axis=0) for x in l]))
 

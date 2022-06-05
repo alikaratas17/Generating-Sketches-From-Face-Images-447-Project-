@@ -5,15 +5,15 @@ from torchvision import transforms as T
 import scipy.io as sio
 
 # All data parameters import
-from utils.params import ParamsPack
+from SynergyNet.utils.params import ParamsPack
 param_pack = ParamsPack()
 
-from backbone_nets import resnet_backbone
-from backbone_nets import mobilenetv1_backbone
-from backbone_nets import mobilenetv2_backbone
-from backbone_nets import ghostnet_backbone
-from backbone_nets.pointnet_backbone import MLP_for, MLP_rev
-from loss_definition import ParamLoss, WingLoss
+from SynergyNet.backbone_nets import resnet_backbone
+from SynergyNet.backbone_nets import mobilenetv1_backbone
+from SynergyNet.backbone_nets import mobilenetv2_backbone
+from SynergyNet.backbone_nets import ghostnet_backbone
+from SynergyNet.backbone_nets.pointnet_backbone import MLP_for, MLP_rev
+from SynergyNet.loss_definition import ParamLoss, WingLoss
 
 import time
 

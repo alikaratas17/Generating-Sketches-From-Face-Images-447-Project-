@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from utils.params import ParamsPack
+from SynergyNet.utils.params import ParamsPack
 param_pack = ParamsPack()
 import math
 

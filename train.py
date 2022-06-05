@@ -16,8 +16,9 @@ import pickle as pkl
 import torch.optim as optim
 from torchvision.transforms import transforms
 import sys
-from .SynergyNet.model_building import SynergyNet
-from .SynergyNet.FaceBoxes import FaceBoxes
+from SynergyNet.model_building import SynergyNet
+from SynergyNet.FaceBoxes import FaceBoxes
+import argparse
 use_synergy_net = True
 
 def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, bisenet,SnetModels,loss_num):
@@ -43,7 +44,6 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
         loss4 = synergynetLoss(SnetModels,x,y)
       else:
         loss4 = 0.0
-      loss3 = 0.0
       bisenet_x = getBisenetOutput(x, bisenet)
       bisenet_y = getBisenetOutput(y.repeat(1,3,1,1), bisenet)
       loss3 = torch.sqrt(torch.square(bisenet_x - bisenet_y).view(bisenet_x.shape[0], -1).mean(dim=1)).mean()  # L2 distance of bisenet embeddings
@@ -57,9 +57,9 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     loss_main_g = loss_main_g / len(main_discriminators)
     loss_main_g = - (loss_main_g + 1e-12).log().mean() #burcu: olasi problem (bi ust satira demis)
     loss1 = loss1 * 1e-1 #weight cycle consistency by 1e-2
-    loss2 = loss2 * 10.0  #weight CLIP loss by 1e-1
-    loss3 = loss3 * 10.0
-    loss4 = loss4 * 1e1
+    loss2 = loss2 * 1.0  #weight CLIP loss by 1e-1
+    loss3 = loss3 * 1.0
+    loss4 = loss4 * 1.0
     loss_main_g = loss_main_g * 1e1
     lossMainGen = loss1 + loss2 + loss3 + loss4 + loss_main_g
     return lossMainGen
@@ -252,8 +252,8 @@ def synergynetLoss(SnetModels,x,y):
     y_samples[i] = x[i,:,Hbeginning:Hend+1,Wbeginning:Wend+1]
   x_samples = x_samples.cuda()
   y_samples = y_samples.cuda()
-  x_samples = (x_samples * 255)-127.5)/128
-  y_samples = (y_samples * 255)-127.5)/128
+  x_samples = ((x_samples * 255)-127.5)/128
+  y_samples = ((y_samples * 255)-127.5)/128
   z_x = model.forward_test(x_samples)
   z_y = model.forward_test(y_samples)
   return torch.sqrt(torch.square(z_x - z_y).view(clip_x_embed.shape[0], -1).mean(dim=1)).mean() #L2 distance of synergynet outputs

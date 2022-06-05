@@ -1,0 +1,4 @@
+This folder contains code for evaluation metrics:
+FID
+Face recognition (Instead of NLDA, we employed https://github.com/ageitgey/face_recognition)
+FSIM

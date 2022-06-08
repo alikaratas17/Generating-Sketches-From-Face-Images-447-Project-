@@ -27,7 +27,7 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     x_hat = other_gen(y)
     parsing_x, _ = getFaceParsingOutput(x,faceParsingNet)
     parsing_y, _ = getFaceParsingOutput(y,faceParsingNet)
-    loss1 = (x - x_hat).mean() # L1 distance cycle consistency
+    loss1 = torch.abs(x - x_hat).mean() # L1 distance cycle consistency
     if x.shape[1]==3:
       image_x = x[:,:,16:-16,16:-16].cuda()
       image_y = y[:,:,16:-16,16:-16].cuda()

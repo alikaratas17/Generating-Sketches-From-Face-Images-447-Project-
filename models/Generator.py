@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import torch
 import numpy as np
 
+
 class Generator(nn.Module):
     def __init__(self, input_channel_number, output_channel_number, resnet_block_number=3):
         #input_channel_number and output_channel_number are 3 or 1

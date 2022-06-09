@@ -227,8 +227,8 @@ def train(model):
   torch.save(labels, "./labels.pt")
   """
   B=16
-  inputs = torch.Tensor(torch.load("./inputs.pt")).unsqueeze(1) 
-  labels = torch.Tensor(torch.load("./labels.pt"))
+  inputs = torch.Tensor(torch.load("./test_ap_photos.pt")).unsqueeze(1) 
+  labels = torch.Tensor(torch.load("./test_ap_sketches.pt"))
   train_inputs_loader = data.DataLoader(inputs,batch_size=B,shuffle=True) 
   train_labels_loader = data.DataLoader(labels,batch_size=B,shuffle=True)  
   lr0 = lr_decay(0)
@@ -277,12 +277,18 @@ def main():
     model = BiSeNet()
     model.load_state_dict(torch.load("./bisenet.pt"))
     model = model.cuda()
+    inputs = (torch.load("../test_ap_photos.pt")[0]/255.).unsqueeze(0)
+    sketches = ((torch.load("../test_ap_sketches.pt").unsqueeze(1)/255.).repeat(1,3,1,1)[0]/3).unsqueeze(0)
+    outputs_p = model(torch.Tensor(inputs).cuda())
+    outputs_s = model(torch.Tensor(sketches).cuda())
+
+    np.save("./outputs_photo", outputs_p.detach().cpu().numpy())
+    np.save("./outputs_sketch", outputs_s.detach().cpu().numpy())
     #sketch_data = (torch.Tensor(np.load("./sketches.pickle", allow_pickle =True)/255.0).repeat(1,3,1,1))
     #inputs = sketch_data[:10]
     #outputs = model(inputs.cuda())
     #np.save("./outputs", outputs.detach().cpu().numpy())  
     #return
-    train(model)
     
 if __name__ == '__main__':
   print("main", flush=True)

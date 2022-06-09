@@ -19,7 +19,7 @@ import sys
 from SynergyNet.model_building import SynergyNet
 from SynergyNet.FaceBoxes import FaceBoxes
 #import argparse
-use_synergy_net = False
+use_synergy_net = True
 
 def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, bisenet,SnetModels,loss_num):
   if loss_num == 1:
@@ -44,7 +44,6 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
         loss4 = 0.0
       bisenet_x = getBisenetOutput(x, bisenet)
       bisenet_y = getBisenetOutput(y.repeat(1,3,1,1), bisenet)
-      #loss3 = 0.0
       loss3 = torch.sqrt(torch.square(bisenet_x - bisenet_y).view(bisenet_x.shape[0], -1).mean(dim=1)).mean()  # L2 distance of bisenet embeddings
     else:
       loss2 = 0.0
@@ -60,11 +59,7 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     loss3 = loss3 * 1.0
     loss4 = loss4 * 1.0
     loss_main_g = loss_main_g * 1e1
-    lossMainGen = loss1 + loss2 + loss3 + loss4 + loss_main_g
-    print(loss1)
-    print(loss1.requires_grad)
-    print(loss2.requires_grad)
-    print(loss3.requires_grad)
+    lossMainGen = loss1+loss2+loss3+loss4+loss_main_g
     return lossMainGen
     #return loss3
   if loss_num ==2:    
@@ -122,7 +117,7 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     lossD_2.backward()
     optimizerDiscA.step()
     lossesA.append((lossG.item(),lossD_1.item(),lossD_2.item()))
-
+    
     b = iterB.next()
     b = b.cuda()
     optimizerGenA.zero_grad()
@@ -152,8 +147,8 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
 
 # Normalize to [0,1]
 def readDatasets():
-  sketch_data =  np.load("./sketches.pickle", allow_pickle =True)/255.0
-  sketch_train = sketch_data[:4000]
+  #sketch_data =  np.load("./sketches.pickle", allow_pickle =True)/255.0
+  #sketch_train = sketch_data[:4000]
   #sketch_test = sketch_data[4000:]
   #sketch_train, sketch_test = torch.utils.data.random_split(sketch_data, [4000, 1000]) 
   #image_files = os.listdir('/datasets/ffhq/images1024x1024/')
@@ -167,13 +162,15 @@ def readDatasets():
       break
   torch.save(photo_data, "../photos.pt")
   """ 
-  photo_data = torch.load("./photos.pt").numpy()/255.0
+  #photo_data = torch.load("./photos.pt").numpy()/255.0
   #print(photo_data.max())
   #print(sketch_data.max())
-  photo_train = photo_data[:8000]
+  #photo_train = photo_data[:8000]
   #photo_test = photo_data[8000:]
   #photo_train, photo_test = torch.utils.data.random_split(photo_data, [8000, 2000])
   #print("Dataset shapes: {} | {} | {} | {}".format(photo_train.shape,photo_test.shape,sketch_train.shape,sketch_test.shape))
+  photo_train = torch.load("./ap_photos.pt").numpy()/255.0
+  sketch_train = (torch.load("./ap_sketches.pt").unsqueeze(1)).numpy()/255.0
   return photo_train, None, sketch_train, None
 
 def getGenerators():
@@ -224,6 +221,7 @@ def getSynergyNetAndFaceBoxes():
   # face detector
   face_boxes = FaceBoxes()
   return model,face_boxes
+
 def synergynetLoss(SnetModels,x,y):
   model,face_boxes  = SnetModels
   x_samples = torch.zeros(x.shape[0],x.shape[1],120,120)
@@ -261,13 +259,14 @@ def synergynetLoss(SnetModels,x,y):
   z_x = model.forward_test(x_samples)
   z_y = model.forward_test(y_samples)
   return torch.sqrt(torch.square(z_x - z_y).view(z_x.shape[0], -1).mean(dim=1)).mean() #L2 distance of synergynet outputs
+
 def getBisenetOutput(x, bisenet):
   return bisenet(x)
 
 def main():
   torch.autograd.set_detect_anomaly(True)
   B=8
-  epochs = 10
+  epochs = 50
   lr = 1e-3
 
   #Load Datasets
@@ -298,6 +297,7 @@ def main():
   clip.model.convert_weights(CLIP) # use CLIP.encode_image() for clip loss
   bisenet = BiSeNet().cuda()
   SnetModels = getSynergyNetAndFaceBoxes()
+  
   #print("genA : {}".format(genA))
   #print("genB : {}".format(genB))
   # Init Optimizers
@@ -320,11 +320,11 @@ def main():
     train_losses.append(l)
     print("Train Loss: {}".format([np.array(x).mean(axis=0) for x in l]))
 
-    torch.save(genA.state_dict(),"./gen{}A.pt".format(exp_id))
-    torch.save(genB.state_dict(),"./gen{}B.pt".format(exp_id))
+    torch.save(genA.state_dict(),"./pregen{}A.pt".format(exp_id))
+    torch.save(genB.state_dict(),"./pregen{}B.pt".format(exp_id))
     for j in range(discriminator_count):
-      torch.save(discriminatorsA[j].state_dict(),"./discA{}{}.pt".format(exp_id, j))
-      torch.save(discriminatorsB[j].state_dict(),"./discB{}{}.pt".format(exp_id, j))
+      torch.save(discriminatorsA[j].state_dict(),"./prediscA{}{}.pt".format(exp_id, j))
+      torch.save(discriminatorsB[j].state_dict(),"./prediscB{}{}.pt".format(exp_id, j))
 
 
 if __name__ == '__main__':

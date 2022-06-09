@@ -17,6 +17,7 @@ from torchvision.transforms import transforms
 def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess,loss_num):
   if loss_num == 1:
     y = main_gen(x)
+    print(y.mean())
     x_hat = other_gen(y)
     parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
     parsing_y, features_y = getFaceParsingOutput(y,faceParsingNet)
@@ -45,8 +46,10 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     loss3 = loss3 * 10.0
     loss_main_g = loss_main_g * 1e1
     lossMainGen = loss1 + loss2 + loss3 + loss_main_g
-    print(loss1.requires_grad)
-    print(loss2.requires_grad)
+    print(loss1)
+    print(loss2)
+    print(loss3)
+    print(loss_main_g)
     return lossMainGen
   if loss_num ==2:    
     parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
@@ -67,7 +70,7 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     loss_main_d = loss_main_d / len(main_discriminators)
     loss_main_d = (loss_main_d + 1e-12).log().mean() * 1e1
     return loss_main_d
-
+"""
 def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_model,faceParsingNet,x, preprocess):
   y = main_gen(x.detach())
   x_hat = other_gen(y)
@@ -134,6 +137,7 @@ def calc_loss(main_gen,other_gen,main_discriminators,other_discriminators,CLIP_m
   lossMainDisc = loss_main_d *1e1
   lossOtherDisc = loss_other_d *1e1
   return lossMainGen,lossMainDisc,lossOtherDisc
+"""
 
 def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimizerDiscA,optimizerDiscB,CLIP_model,faceParsingNet,preprocess):
   genA.train()
@@ -196,7 +200,8 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     optimizerDiscB.step()
     lossesB.append((lossG.item(),lossD_1.item(),lossD_2.item()))
   return lossesA,lossesB
-
+  
+"""
 def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,faceParsingNet,preprocess):
   genA.eval()
   genB.eval()
@@ -215,7 +220,7 @@ def eval_model(genA,genB,discA,discB,testA_loader,testB_loader,CLIP_model,facePa
       loss = calc_loss(genA, genB, discA, discB, CLIP_model, faceParsingNet, b, preprocess)
       lossesB.append(tuple([i.item() for i in loss]))
     return lossesA, lossesB
-
+"""
 
 # Normalize to [0,1]
 def readDatasets():

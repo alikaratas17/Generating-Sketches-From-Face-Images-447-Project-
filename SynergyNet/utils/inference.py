@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from utils.params import ParamsPack
+from SynergyNet.utils.params import ParamsPack
 param_pack = ParamsPack()
 from math import cos, sin, atan2, asin, sqrt
 import cv2

@@ -27,7 +27,7 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     x_hat = other_gen(y)
     parsing_x, _ = getFaceParsingOutput(x,faceParsingNet)
     parsing_y, _ = getFaceParsingOutput(y,faceParsingNet)
-    loss1 = torch.abs(x - x_hat).mean() # L1 distance cycle consistency
+    loss1 = (x - x_hat).mean() # L1 distance cycle consistency
     if x.shape[1]==3:
       image_x = x[:,:,16:-16,16:-16].cuda()
       image_y = y[:,:,16:-16,16:-16].cuda()
@@ -50,18 +50,14 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
       loss3 = 0.0
       loss4 = 0.0
     loss_main_g = main_discriminators[0](y)
-    for i in range(1,len(main_discriminators)):
-      loss_main_g += main_discriminators[i](y * parsing_y[i-1])
-    loss_main_g = loss_main_g / len(main_discriminators)
-    loss_main_g = (1-loss_main_g + 1e-12).log().mean() #burcu: olasi problem (bi ust satira demis)
+    loss_main_g = - (loss_main_g + 1e-12).log().mean() #burcu: olasi problem (bi ust satira demis)
     loss1 = loss1 * 1e-1 #weight cycle consistency by 1e-2
-    loss2 = loss2 * 1.0  #weight CLIP loss by 1e-1
-    loss3 = loss3 * 1.0
-    loss4 = loss4 * 1.0
+    loss2 = loss2 * 10.0  #weight CLIP loss by 1e-1
+    loss3 = loss3 * 10.0
+    loss4 = loss4 * 10.0
     loss_main_g = loss_main_g * 1e1
     lossMainGen = loss1+loss2+loss3+loss4+loss_main_g
     return lossMainGen
-    #return loss3
   if loss_num ==2:    
     parsing_x, features_x = getFaceParsingOutput(x,faceParsingNet)
     # For other_discriminators x is real data
@@ -93,9 +89,6 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
   c = min(len(iterA),len(iterB))
   for _ in tqdm(range(c)):
     a = iterA.next()
-    noise = (torch.rand(a.shape)-0.5)/255.0
-    a = a + noise
-    a = torch.clamp(a,0,1)  
     a = a.cuda()
     optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
@@ -120,13 +113,9 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
     lossD_2.backward()
     optimizerDiscA.step()
     lossesA.append((lossG.item(),lossD_1.item(),lossD_2.item()))
-    print(a.mean())
+
     b = iterB.next()
-    noise = (torch.rand(b.shape)-0.5)/255.0
-    b = b + noise
-    b = torch.clamp(b,0,1)
     b = b.cuda()
-    print(b.mean())
     optimizerGenA.zero_grad()
     optimizerGenB.zero_grad()
     optimizerDiscA.zero_grad()
@@ -154,8 +143,6 @@ def train(genA,genB,discA,discB,iterA,iterB,optimizerGenA,optimizerGenB,optimize
 
 # Normalize to [0,1]
 def readDatasets():
-  sketch_data =  np.load("./sketches.pickle", allow_pickle =True)/255.0
-  sketch_train = sketch_data[:400]
   #sketch_test = sketch_data[4000:]
   #sketch_train, sketch_test = torch.utils.data.random_split(sketch_data, [4000, 1000]) 
   #image_files = os.listdir('/datasets/ffhq/images1024x1024/')
@@ -169,37 +156,33 @@ def readDatasets():
       break
   torch.save(photo_data, "../photos.pt")
   """ 
-  photo_data = torch.load("./photos.pt").numpy()/255.0
+  photo_train = torch.load("./ap_photos.pt").numpy()/255.0
+  sketch_train = (torch.load("./ap_sketches.pt").unsqueeze(1)).numpy()/255.0
   #print(photo_data.max())
   #print(sketch_data.max())
-  photo_train = photo_data[:800]
   #photo_test = photo_data[8000:]
   #photo_train, photo_test = torch.utils.data.random_split(photo_data, [8000, 2000])
   #print("Dataset shapes: {} | {} | {} | {}".format(photo_train.shape,photo_test.shape,sketch_train.shape,sketch_test.shape))
-  #photo_train = torch.load("./ap_photos.pt").numpy()/255.0
-  #sketch_train = (torch.load("./ap_sketches.pt").unsqueeze(1)).numpy()/255.0
   return photo_train, None, sketch_train, None
 
 def getGenerators():
   a = Generator(1,3) #sketch->photo
   b = Generator(3,1) #photo->sketch
-  """
-  if "gen9A.pt" in os.listdir("."):
-    a.load_state_dict(torch.load("./gen9A.pt"))
+  if "gen11A.pt" in os.listdir("."):
+    a.load_state_dict(torch.load("./2genA.pt"))
     print("loaded")
-  if "gen9B.pt" in os.listdir("."):
-    b.load_state_dict(torch.load("./gen9B.pt"))
-  """
+  if "gen11B.pt" in os.listdir("."):
+    b.load_state_dict(torch.load("./2genB.pt"))
   return a, b
 
 def getDiscriminators(num_disc):
   a = [Discriminator(3) for i in range(num_disc)] #discriminate photo
   b = [Discriminator(1) for i in range(num_disc)] #discriminate sketch
   for i in range(num_disc):
-    if "discA9{}.pt".format(i) in os.listdir("."):
-      a[i].load_state_dict(torch.load("./discA9{}.pt".format(i)))
-    if "discB9{}.pt".format(i) in os.listdir("."):
-      b[i].load_state_dict(torch.load("./discB9{}.pt".format(i)))
+    if "discA11{}.pt".format(i) in os.listdir("."):
+      a[i].load_state_dict(torch.load("./2discA{}.pt".format(i)))
+    if "discB11{}.pt".format(i) in os.listdir("."):
+      b[i].load_state_dict(torch.load("./2discB{}.pt".format(i)))
   #a = [x.cuda() for x in a]
   #b = [x.cuda() for x in b]
   return a,b
@@ -266,8 +249,6 @@ def synergynetLoss(SnetModels,x,y):
   y_samples = ((y_samples * 255)-127.5)/128
   z_x = model.forward_test(x_samples)
   z_y = model.forward_test(y_samples)
-  print(z_x.shape)
-  print(z_y.shape)
   return torch.sqrt(torch.square(z_x - z_y).view(z_x.shape[0], -1).mean(dim=1)).mean() #L2 distance of synergynet outputs
 
 def getBisenetOutput(x, bisenet):
@@ -276,8 +257,8 @@ def getBisenetOutput(x, bisenet):
 def main():
   torch.autograd.set_detect_anomaly(True)
   B=8
-  epochs = 10
-  lr = 1e-3
+  epochs = 20
+  lr = 3e-4
 
   #Load Datasets
   train_dataA, test_dataA, train_dataB, test_dataB = readDatasets()

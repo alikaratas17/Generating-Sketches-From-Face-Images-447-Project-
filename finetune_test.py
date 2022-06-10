@@ -16,9 +16,6 @@ import torch.optim as optim
 from torchvision.transforms import transforms
 # Normalize to [0,1]
 def readDatasets():
-  sketch_data = np.load("./sketches.pickle", allow_pickle =True)/255.0
-  sketch_train = sketch_data[:4000]
-  sketch_test = sketch_data[4000:]
   #sketch_train, sketch_test = torch.utils.data.random_split(sketch_data, [4000, 1000]) 
   #image_files = os.listdir('/datasets/ffhq/images1024x1024/')
   """
@@ -30,27 +27,26 @@ def readDatasets():
     if i==10000:
       break
   torch.save(photo_data, "../photos.pt")
-  """ 
-  photo_data = torch.load("./photos.pt").numpy()/255.0
+  """
+  sketch_test = (torch.load("./test_ap_sketches.pt").unsqueeze(1)).numpy()/255.0 
+  photo_test = torch.load("./test_ap_photos.pt").numpy()/255.0
   #print(photo_data.max())
   #print(sketch_data.max())
-  photo_train = photo_data[:8000]
-  photo_test = photo_data[8000:]
   #photo_train, photo_test = torch.utils.data.random_split(photo_data, [8000, 2000])
   #print("Dataset shapes: {} | {} | {} | {}".format(photo_train.shape,photo_test.shape,sketch_train.shape,sketch_test.shape))
-  return photo_train, photo_test, sketch_train, sketch_test
+  return None, photo_test, None, sketch_test
 
 def getGenerators():
   a = Generator(1,3) #sketch->photo
   b = Generator(3,1) #photo->sketch
-  if "gen12A.pt" in os.listdir("."):
-    a.load_state_dict(torch.load("./gen8A.pt"))
-  if "gen12B.pt" in os.listdir("."):
-    b.load_state_dict(torch.load("./gen8B.pt"))
+  if "1genA.pt" in os.listdir("."):
+    a.load_state_dict(torch.load("./gen10A.pt"))
+  if "1genB.pt" in os.listdir("."):
+    b.load_state_dict(torch.load("./gen10B.pt"))
   return a, b
 def main():
   torch.autograd.set_detect_anomaly(True)
-  B=8
+  B=70
   epochs = 10
   lr = 1e-3
 
@@ -61,8 +57,8 @@ def main():
   #test_dataA = test_dataA[:100]
   #test_dataB= test_dataB[:100]
   
-  trainA_loader = data.DataLoader(torch.Tensor(train_dataA),batch_size=B,shuffle=True) 
-  trainB_loader = data.DataLoader(torch.Tensor(train_dataB),batch_size=B,shuffle=True)
+  #trainA_loader = data.DataLoader(torch.Tensor(train_dataA),batch_size=B,shuffle=True) 
+  #trainB_loader = data.DataLoader(torch.Tensor(train_dataB),batch_size=B,shuffle=True)
   testA_loader = data.DataLoader(torch.Tensor(test_dataA),batch_size=B,shuffle=False)
   testB_loader = data.DataLoader(torch.Tensor(test_dataB),batch_size=B,shuffle=False)
   
@@ -77,13 +73,9 @@ def main():
       y = genB(x.cuda())
       samples.append([x,y.cpu()])
       break
-
-    for x in trainA_loader:
-      y = genB(x.cuda())
-      samples.append([x,y.cpu()])
-      break
-  x_samples = torch.cat([samples[0][0],samples[1][0]],dim = 0).numpy()
-  y_samples = torch.cat([samples[0][1],samples[1][1]],dim = 0).numpy()
+  
+  x_samples = samples[0][0].numpy()
+  y_samples = samples[0][1].numpy()
   with open("xA_samples.pickle","wb") as f:
     pkl.dump(x_samples,f)
   with open("yA_samples.pickle","wb") as f:
@@ -95,12 +87,8 @@ def main():
       samples.append([x,y.cpu()])
       break
 
-    for x in trainB_loader:
-      y = genA(x.cuda())
-      samples.append([x,y.cpu()])
-      break
-  x_samples = torch.cat([samples[0][0],samples[1][0]],dim = 0).numpy()
-  y_samples = torch.cat([samples[0][1],samples[1][1]],dim = 0).numpy()
+  x_samples = samples[0][0].numpy()
+  y_samples = samples[0][1].numpy()
   with open("xB_samples.pickle","wb") as f:
     pkl.dump(x_samples,f)
   with open("yB_samples.pickle","wb") as f:

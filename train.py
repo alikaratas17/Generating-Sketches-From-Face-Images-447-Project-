@@ -54,9 +54,9 @@ def calc_loss_train(main_gen,other_gen,main_discriminators,other_discriminators,
     for i in range(1,len(main_discriminators)):
       loss_main_g += main_discriminators[i](y * parsing_y[i-1])
     loss_main_g = loss_main_g / len(main_discriminators)
-    loss_main_g = - (loss_main_g + 1e-12).log().mean() #burcu: olasi problem (bi ust satira demis)
-    loss1 = loss1 * 1e-1 #weight cycle consistency by 1e-2
-    loss2 = loss2 * 1.0  #weight CLIP loss by 1e-1
+    loss_main_g = - (loss_main_g + 1e-12).log().mean() 
+    loss1 = loss1 * 1e-1 # Cycle Consistency Loss
+    loss2 = loss2 * 1.0  #CLIP Loss
     loss3 = loss3 * 1.0
     loss4 = loss4 * 1.0
     loss_main_g = loss_main_g * 1e1

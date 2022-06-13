@@ -17,6 +17,7 @@ from PIL import Image
 import timm
 import tqdm
 
+#Disclaimer: BiSeNet model and its components is implemented following Yu et al (2018)'s work.
 class Xception(nn.Module):
   def __init__(self, in_channels, out_channels):
     super().__init__()

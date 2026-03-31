@@ -41,6 +41,8 @@ The results were mixed.
 Some experiments improved **face recognition accuracy**, but the **baseline** was still better in some metrics.  
 Training was also very sensitive to the loss weights. In some cases, the model generated grayscale versions of the images instead of better sketches. 
 
+More information can be found in our presentation titled "Final Presentation.pdf", available in the repo.
+
 # Some Acknowledgements
 - FaceParsingNetwork folder contains codes from https://github.com/cientgu/Mask_Guided_Portrait_Editing
 - SynergyNet folder contains the codes and files of SynergyNet (https://github.com/choyingw/SynergyNet)
